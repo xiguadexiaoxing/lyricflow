@@ -3,7 +3,6 @@
 安装与启动
 
 ```bash
-mkdir lyricflow && cd lyricflow
 npm init -y
 npm install ws
 ```
