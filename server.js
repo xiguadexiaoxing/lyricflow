@@ -447,42 +447,56 @@ var lines = [
 }
 
 /* ═══ 媒体更新处理 ═══ */
+/* ═══ 媒体更新处理 ═══ */
 var pendingKey = '';
 function handleMediaUpdate(d) {
-    if (d.e === 'none') { if (S.connected) { S.connected = false; S.isPlaying = false; broadcast('status', { connected: false }); } return; }
+    if (d.e === 'none') {
+        if (S.connected) { S.connected = false; S.isPlaying = false; broadcast('status', { connected: false }); }
+        return;
+    }
     if (!S.connected) { S.connected = true; log('检测到: ' + d.p); broadcast('status', { connected: true }); }
 
     var song, artist;
     if (d.a) { song = d.t; artist = d.a; }
-    else { var raw = d.t || ''; var sep = raw.indexOf(' - '); if (sep > 0 && sep < raw.length - 3) { song = raw.substring(0, sep).trim(); artist = raw.substring(sep + 3).trim(); } else { song = raw; artist = ''; } }
+    else {
+        var raw = d.t || '';
+        var sep = raw.indexOf(' - ');
+        if (sep > 0 && sep < raw.length - 3) { song = raw.substring(0, sep).trim(); artist = raw.substring(sep + 3).trim(); }
+        else { song = raw; artist = ''; }
+    }
     if (!song || song.length < 1) return;
 
-    // SMTC 播放状态
-if (d.pb !== undefined) {
-    S.isPlaying = (d.pb === 'Playing');
-    broadcast('position', { position: S.position, isPlaying: S.isPlaying, duration: S.estDur });
-} else {
-// 不覆盖 SMTC 轮询设置的播放状态，只在无 SMTC 时默认为 true
-if (PLAT !== 'win32') S.isPlaying = true;
-}
-    var now = Date.now(), elapsed = (now - S.lastTick) / 1000; S.lastTick = now;
+    var now = Date.now(), elapsed = (now - S.lastTick) / 1000;
+    S.lastTick = now;
     var newKey = ((artist || '') + '|||' + song).toLowerCase();
 
     if (newKey !== S.trackKey && newKey !== pendingKey) {
-        S.trackKey = newKey; S.title = song; S.artist = artist; S.position = 0; pendingKey = newKey;
+        S.trackKey = newKey;
+        S.title = song;
+        S.artist = artist;
+        S.position = 0;
+        S.isPlaying = true;
+        pendingKey = newKey;
         log('曲目: ' + (artist || '?') + ' - ' + song);
         broadcast('track', { title: song, artist: artist });
 
         ensureLyrics(song, artist).then(function(result) {
             if (result && result.lyrics.length) {
-                S.lyrics = result.lyrics; S.lyricsSource = result.source;
+                S.lyrics = result.lyrics;
+                S.lyricsSource = result.source;
                 S.estDur = result.lyrics[result.lyrics.length - 1].time + 15;
                 broadcast('lyrics', { lyrics: result.lyrics, source: result.source });
                 log('歌词加载: ' + result.source + ' ' + result.lyrics.length + '行');
-            } else { S.lyrics = null; S.lyricsSource = ''; broadcast('lyrics', { lyrics: null, source: 'not_found' }); }
+            } else {
+                S.lyrics = null;
+                S.lyricsSource = '';
+                broadcast('lyrics', { lyrics: null, source: 'not_found' });
+            }
             pendingKey = '';
         });
-    } else if (S.isPlaying && elapsed < 2 && newKey === S.trackKey) { S.position += elapsed; }
+    } else if (S.isPlaying && elapsed < 2 && newKey === S.trackKey) {
+        S.position += elapsed;
+    }
     broadcast('position', { position: S.position, isPlaying: S.isPlaying, duration: S.estDur });
 }
 
