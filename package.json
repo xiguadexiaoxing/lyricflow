@@ -1,0 +1,27 @@
+{
+  "name": "lyricflow",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "bin": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "bundle": "npx esbuild server.js --bundle --platform=node --target=node18 --outfile=LyricFlow-bundled.js --minify"
+  },
+  "pkg": {
+    "assets": [
+      "index.html"
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.20.0",
+    "esbuild": "^0.28.1",
+    "nexe": "^5.0.0-beta.4"
+  }
+}
