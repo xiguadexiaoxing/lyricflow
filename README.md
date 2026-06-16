@@ -13,6 +13,10 @@ npm install ws
 ```bash
 node server.js
 ```
+随后它会在电脑的3721端口开放
+你可以用 [本地链接](http://localhost:3721)打开
+或者访问远程链接的3721端口打开
+
 可选：扫描本地 .lrc 文件目录：
 
 ```bash
