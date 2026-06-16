@@ -5,6 +5,7 @@
 ```bash
 npm init -y
 npm install ws
+npm install node-forge
 ```
 
 启动命令
