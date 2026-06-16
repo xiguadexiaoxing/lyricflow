@@ -330,26 +330,97 @@ function broadcast(type, data) { var msg = JSON.stringify({ type: type, data: da
 /* ═══ 窗口标题检测桥接 ═══ */
 var bridgeProc = null;
 var psCounter = 0;
+/* ═══ SMTC 独立轮询（暂停/播放状态） ═══ */
+function startSMTCPoll() {
+    if (PLAT !== 'win32') return;
 
+    var smtcScript = [
+        "$ErrorActionPreference = 'SilentlyContinue'",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+        "Add-Type -AssemblyName System.Runtime.WindowsRuntime",
+        "$methods = [System.WindowsRuntimeSystemExtensions].GetMethods()",
+        "$asTask = $null",
+        "foreach ($m in $methods) {",
+        "  if ($m.Name -eq 'AsTask') {",
+        "    $p = $m.GetParameters()",
+        "    if ($p.Count -eq 1 -and $p[0].ParameterType.Name -eq 'IAsyncOperation`1') {",
+        "      $asTask = $m; break",
+        "    }",
+        "  }",
+        "}",
+        "function Await($t, $r) {",
+        "  $g = $asTask.MakeGenericMethod($r)",
+        "  return $g.Invoke($null, @($t)).GetAwaiter().GetResult()",
+        "}",
+        "[Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType = WindowsRuntime] | Out-Null",
+        "",
+        "$lastState = 'Unknown'",
+        "while ($true) {",
+        "  try {",
+        "    $async = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()",
+        "    $manager = Await $async ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])",
+        "    $session = $manager.GetCurrentSession()",
+        "    if ($null -ne $session) {",
+        "      $pb = $session.GetPlaybackInfo()",
+        "      $st = $pb.PlaybackStatus.ToString()",
+        "      if ($st -ne $lastState) {",
+        "        $lastState = $st",
+        "        Write-Output $st",
+        "      }",
+        "    }",
+        "  } catch {}",
+        "  Start-Sleep -Milliseconds 1500",
+        "}",
+    ].join('\r\n');
+
+    var smtcPath = path.join(os.tmpdir(), 'lyricflow_smtc_poll.ps1');
+    fs.writeFileSync(smtcPath, '\uFEFF' + smtcScript, 'utf8');
+
+    var smtcProc = spawn('powershell.exe', [
+        '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', smtcPath
+    ], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+
+    var smtcBuf = '';
+    smtcProc.stdout.setEncoding('utf8');
+    smtcProc.stdout.on('data', function(chunk) {
+        smtcBuf += chunk;
+        var idx;
+        while ((idx = smtcBuf.indexOf('\n')) !== -1) {
+            var line = smtcBuf.substring(0, idx).trim();
+            smtcBuf = smtcBuf.substring(idx + 1);
+            if (!line) continue;
+            var playing = (line === 'Playing');
+            if (S.isPlaying !== playing) {
+                S.isPlaying = playing;
+                log('播放状态: ' + (playing ? '播放' : '暂停'));
+                broadcast('position', { position: S.position, isPlaying: S.isPlaying, duration: S.estDur });
+            }
+        }
+    });
+    smtcProc.stderr.on('data', function() {});
+    smtcProc.on('close', function() { setTimeout(startSMTCPoll, 5000); });
+    smtcProc.on('error', function() {});
+    log('SMTC 状态轮询已启动');
+}
 function startBridge() {
     log('启动窗口标题检测...');
     if (PLAT === 'win32') {
-        var lines = [
-            "$ErrorActionPreference = 'SilentlyContinue'",
-            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
-            "",
-            "$pl = @('cloudmusic','QQMusic','Spotify','foobar2000','MusicBee','vlc','AIMP','iTunes','wmplayer')",
-            "while ($true) {",
-            "  $fnd = $false; $pn = ''; $wt = ''",
-            "  foreach ($n in $pl) {",
-            "    $p = Get-Process -Name $n -EA SilentlyContinue | Where-Object { $_.MainWindowTitle -ne '' } | Select -First 1",
-            "    if ($p -and $p.MainWindowTitle.Length -gt 2) { $pn = $n; $wt = $p.MainWindowTitle; $fnd = $true; break }",
-            "  }",
-            "  if (-not $fnd) { Write-Output '{\"e\":\"none\"}' }",
-            "  else { @{p=$pn;t=$wt} | ConvertTo-Json -Compress }",
-            "  Start-Sleep -Milliseconds 500",
-            "}"
-        ];
+var lines = [
+    "$ErrorActionPreference = 'SilentlyContinue'",
+    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+    "",
+    "$pl = @('cloudmusic','QQMusic','Spotify','foobar2000','MusicBee','vlc','AIMP','iTunes','wmplayer')",
+    "while ($true) {",
+    "  $fnd = $false; $pn = ''; $wt = ''",
+    "  foreach ($n in $pl) {",
+    "    $p = Get-Process -Name $n -EA SilentlyContinue | Where-Object { $_.MainWindowTitle -ne '' } | Select -First 1",
+    "    if ($p -and $p.MainWindowTitle.Length -gt 2) { $pn = $n; $wt = $p.MainWindowTitle; $fnd = $true; break }",
+    "  }",
+    "  if (-not $fnd) { Write-Output '{\"e\":\"none\"}' }",
+    "  else { @{p=$pn;t=$wt} | ConvertTo-Json -Compress }",
+    "  Start-Sleep -Milliseconds 500",
+    "}",
+];
         var psPath = path.join(os.tmpdir(), 'lyricflow_bridge.ps1');
         fs.writeFileSync(psPath, '\uFEFF' + lines.join('\r\n'), 'utf8');
         bridgeProc = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', psPath], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
@@ -386,7 +457,14 @@ function handleMediaUpdate(d) {
     else { var raw = d.t || ''; var sep = raw.indexOf(' - '); if (sep > 0 && sep < raw.length - 3) { song = raw.substring(0, sep).trim(); artist = raw.substring(sep + 3).trim(); } else { song = raw; artist = ''; } }
     if (!song || song.length < 1) return;
 
-    S.isPlaying = true;
+    // SMTC 播放状态
+if (d.pb !== undefined) {
+    S.isPlaying = (d.pb === 'Playing');
+    broadcast('position', { position: S.position, isPlaying: S.isPlaying, duration: S.estDur });
+} else {
+// 不覆盖 SMTC 轮询设置的播放状态，只在无 SMTC 时默认为 true
+if (PLAT !== 'win32') S.isPlaying = true;
+}
     var now = Date.now(), elapsed = (now - S.lastTick) / 1000; S.lastTick = now;
     var newKey = ((artist || '') + '|||' + song).toLowerCase();
 
@@ -404,7 +482,7 @@ function handleMediaUpdate(d) {
             } else { S.lyrics = null; S.lyricsSource = ''; broadcast('lyrics', { lyrics: null, source: 'not_found' }); }
             pendingKey = '';
         });
-    } else if (elapsed < 2 && newKey === S.trackKey) { S.position += elapsed; }
+    } else if (S.isPlaying && elapsed < 2 && newKey === S.trackKey) { S.position += elapsed; }
     broadcast('position', { position: S.position, isPlaying: S.isPlaying, duration: S.estDur });
 }
 
@@ -440,30 +518,29 @@ wss.on('connection', function(ws) {
     clients.add(ws); log('浏览器连接');
     ws.send(JSON.stringify({ type: 'init', data: { connected: S.connected, title: S.title, artist: S.artist, position: S.position, isPlaying: S.isPlaying, lyrics: S.lyrics, lyricsSource: S.lyricsSource, duration: S.estDur } }));
     ws.send(JSON.stringify({ type: 'logs', data: logs.slice(-50) }));
-    ws.on('message', async function(raw) {
+    ws.on('message', function(raw) {
         try {
-            var msg = JSON.parse(raw.toString());
-            if (msg.type === 'lrc' || msg.type === 'applyLyrics') {
-                var p = parseLRC(msg.data);
-                if (p.lyrics.length) { S.lyrics = p.lyrics; S.lyricsSource = 'manual'; S.estDur = p.lyrics[p.lyrics.length - 1].time + 15; broadcast('lyrics', { lyrics: p.lyrics, source: 'manual' }); log('手动: ' + p.lyrics.length + '行'); }
-            } else if (msg.type === 'search') {
-                var results = await searchLRCLIB(msg.data.track, msg.data.artist);
-                var mapped = results.map(function(r) { return { trackName: r.trackName, artistName: r.artistName, albumName: r.albumName, duration: r.duration, hasSynced: !!r.syncedLyrics, syncedLyrics: r.syncedLyrics || null, plainLyrics: r.plainLyrics || null }; });
-                if (mapped.length === 0) mapped = await searchNetEase(msg.data.track, msg.data.artist);
-                ws.send(JSON.stringify({ type: 'searchResults', data: mapped.slice(0, 10) }));
-            } else if (msg.type === 'key') { sendMediaKey(msg.data); }
-        } catch (e) { log('WS错误: ' + e.message); }
-    });
+          var msg = JSON.parse(raw.toString());
+          if (msg.type === 'lrc' || msg.type === 'applyLyrics') {
+            var p = parseLRC(msg.data);
+            if (p.lyrics.length) { S.lyrics = p.lyrics; S.lyricsSource = 'manual'; S.estDur = p.lyrics[p.lyrics.length - 1].time + 15; broadcast('lyrics', { lyrics: p.lyrics, source: 'manual' }); }
+          } else if (msg.type === 'search') {
+            (async function() {
+              var results = await searchLRCLIB(msg.data.track, msg.data.artist);
+              var mapped = results.map(function(r) { return { trackName: r.trackName, artistName: r.artistName, albumName: r.albumName, duration: r.duration, hasSynced: !!r.syncedLyrics, syncedLyrics: r.syncedLyrics || null, plainLyrics: r.plainLyrics || null }; });
+              if (mapped.length === 0) mapped = await searchNetEase(msg.data.track, msg.data.artist);
+              ws.send(JSON.stringify({ type: 'searchResults', data: mapped.slice(0, 10) }));
+            })();
+          } else if (msg.type === 'key') { sendMediaKey(msg.data); }
+        } catch(e) {}
+      });
     ws.on('close', function() { clients.delete(ws); log('浏览器断开'); });
 });
 
 /* ═══ 启动 ═══ */
 console.log('\n  LyricFlow\n');
 if (MUSIC_DIR) buildLRCIndex(MUSIC_DIR);
-startBridge();
-/* ═══ 启动 ═══ */
-console.log('\n  LyricFlow\n');
-if (MUSIC_DIR) buildLRCIndex(MUSIC_DIR);
+startSMTCPoll();
 startBridge();
 server.listen(PORT, function() {
   log('就绪: http://localhost:' + PORT);
@@ -501,4 +578,87 @@ server.listen(PORT, function() {
   console.log('  ==========================================');
   console.log('');
 });
+/* ═══ HTTPS (安卓电量需要) ═══ */
+/* ═══ HTTPS (安卓电量) ═══ */
+/* ═══ HTTPS (安卓电量) ═══ */
+(function(){
+  var forge;
+  try { forge = require('node-forge'); } catch(e) {
+    console.log('  运行 npm install node-forge 后重启');
+    return;
+  }
+
+  try {
+    var keys = forge.pki.rsa.generateKeyPair(2048);
+    var cert = forge.pki.createCertificate();
+    cert.publicKey = keys.publicKey;
+    cert.serialNumber = '01';
+    cert.validity.notBefore = new Date();
+    cert.validity.notAfter = new Date();
+    cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 1);
+    var attrs = [{ name: 'commonName', value: 'LyricFlow' }];
+    cert.setSubject(attrs);
+    cert.setIssuer(attrs);
+    cert.sign(keys.privateKey, forge.md.sha256.create());
+    var certPem = forge.pki.certificateToPem(cert);
+    var keyPem = forge.pki.privateKeyToPem(keys.privateKey);
+
+    var https = require('https');
+    var HTTPS_PORT = PORT + 1;
+    var httpsServer = https.createServer({ key: keyPem, cert: certPem }, function(req, res) {
+      var url = req.url.split('?')[0];
+      if (url === '/' || url === '/index.html') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(HTML);
+      } else {
+        res.writeHead(404);
+        res.end();
+      }
+    });
+
+    var wss2 = new WebSocketServer({ server: httpsServer });
+    wss2.on('connection', function(ws) {
+      clients.add(ws);
+      ws.send(JSON.stringify({ type: 'init', data: { connected: S.connected, title: S.title, artist: S.artist, position: S.position, isPlaying: S.isPlaying, lyrics: S.lyrics, lyricsSource: S.lyricsSource, duration: S.estDur } }));
+      ws.send(JSON.stringify({ type: 'logs', data: logs.slice(-50) }));
+      ws.on('message', function(raw) {
+        try {
+          var msg = JSON.parse(raw.toString());
+          wss.clients.forEach(function(c) { if (c.readyState === 1) c.send(raw.toString()); });
+          wss2.clients.forEach(function(c) { if (c.readyState === 1 && c !== ws) c.send(raw.toString()); });
+          if (msg.type === 'lrc' || msg.type === 'applyLyrics') {
+            var p = parseLRC(msg.data);
+            if (p.lyrics.length) { S.lyrics = p.lyrics; S.lyricsSource = 'manual'; S.estDur = p.lyrics[p.lyrics.length - 1].time + 15; broadcast('lyrics', { lyrics: p.lyrics, source: 'manual' }); log('手动: ' + p.lyrics.length + '行'); }
+          } else if (msg.type === 'search') {
+            (async function() {
+              var results = await searchLRCLIB(msg.data.track, msg.data.artist);
+              var mapped = results.map(function(r) { return { trackName: r.trackName, artistName: r.artistName, albumName: r.albumName, duration: r.duration, hasSynced: !!r.syncedLyrics, syncedLyrics: r.syncedLyrics || null, plainLyrics: r.plainLyrics || null }; });
+              if (mapped.length === 0) mapped = await searchNetEase(msg.data.track, msg.data.artist);
+              ws.send(JSON.stringify({ type: 'searchResults', data: mapped.slice(0, 10) }));
+            })();
+          } else if (msg.type === 'key') { sendMediaKey(msg.data); }
+        } catch(e) {}
+      });
+      ws.on('close', function() { clients.delete(ws); });
+    });
+
+    httpsServer.listen(HTTPS_PORT, '0.0.0.0', function() {
+      var ifaces = os.networkInterfaces();
+      console.log('');
+      console.log('  ==========================================');
+      console.log('  HTTPS (电量 + 防息屏):');
+      Object.keys(ifaces).forEach(function(name) {
+        ifaces[name].forEach(function(iface) {
+          if (!iface.internal && iface.family === 'IPv4') {
+            console.log('    https://' + iface.address + ':' + HTTPS_PORT);
+          }
+        });
+      });
+      console.log('  手机首次访问: 高级 -> 继续访问');
+      console.log('  ==========================================');
+      console.log('');
+    });
+    httpsServer.on('error', function(e) { console.log('  HTTPS 错误: ' + e.message); });
+  } catch(e) { console.log('  HTTPS 异常: ' + e.message); }
+})();
 process.on('SIGINT', function() { if (bridgeProc) bridgeProc.kill(); process.exit(0); });
