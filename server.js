@@ -461,5 +461,44 @@ wss.on('connection', function(ws) {
 console.log('\n  LyricFlow\n');
 if (MUSIC_DIR) buildLRCIndex(MUSIC_DIR);
 startBridge();
-server.listen(PORT, function() { log('就绪: http://localhost:' + PORT); });
+/* ═══ 启动 ═══ */
+console.log('\n  LyricFlow\n');
+if (MUSIC_DIR) buildLRCIndex(MUSIC_DIR);
+startBridge();
+server.listen(PORT, function() {
+  log('就绪: http://localhost:' + PORT);
+  var ifaces = os.networkInterfaces();
+  var ipv4 = [], ipv6Global = [], ipv6Link = [];
+  Object.keys(ifaces).forEach(function(name) {
+    ifaces[name].forEach(function(iface) {
+      if (iface.internal) return;
+      if (iface.family === 'IPv4') ipv4.push(iface.address);
+      if (iface.family === 'IPv6') {
+        var addr = iface.address;
+        if (addr.indexOf('%') !== -1) {
+          ipv6Link.push(addr.split('%')[0]);
+        } else {
+          ipv6Global.push(addr);
+        }
+      }
+    });
+  });
+  console.log('');
+  console.log('  ==========================================');
+  console.log('  手机浏览器访问:');
+  console.log('');
+  if (ipv4.length) {
+    ipv4.forEach(function(ip) { console.log('    http://' + ip + ':' + PORT); });
+  }
+  if (ipv6Global.length) {
+    ipv6Global.forEach(function(ip) { console.log('    http://[' + ip + ']:' + PORT); });
+  }
+  if (ipv6Link.length) {
+    ipv6Link.forEach(function(ip) { console.log('    http://[' + ip + ']:' + PORT + '  (链路本地)'); });
+  }
+  console.log('');
+  console.log('  连接同一 Wi-Fi 后访问以上地址');
+  console.log('  ==========================================');
+  console.log('');
+});
 process.on('SIGINT', function() { if (bridgeProc) bridgeProc.kill(); process.exit(0); });

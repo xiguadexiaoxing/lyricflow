@@ -8,9 +8,91 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#08080c;--s:#101016;--a:#f0a030;--at:rgba(240,160,48,.1);--ag:rgba(240,160,48,.35);--t:#e8e4dc;--t2:rgba(232,228,220,.55);--t3:rgba(232,228,220,.2);--t4:rgba(232,228,220,.08);--b:rgba(255,255,255,.06);--r:12px;--rs:8px;--fd:'Cormorant Garamond',serif;--fb:'Noto Sans SC',sans-serif;--fm:'DM Mono',monospace}
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-family:var(--fb);-webkit-font-smoothing:antialiased}
+.dark{--bg:#000;--s:#000;--t:#bbb;--t2:rgba(200,200,200,.45);--t3:rgba(200,200,200,.18);--t4:rgba(200,200,200,.07);--b:rgba(255,255,255,.03)}
+.dark #bg{display:none!important}
+.dark .orb{display:none!important}
+.dark #topbar{background:rgba(0,0,0,.98)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.dark #controls{background:rgba(0,0,0,.98)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.dark #logpanel{background:rgba(0,0,0,.98)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.dark .modal{background:rgba(0,0,0,.9)!important}
+.dark .mbox{background:#000!important}
+.dark .ll.on{color:#e0b040;text-shadow:0 0 40px rgba(224,176,64,.25),0 0 80px rgba(224,176,64,.1)}
+.dark .cbtns button{color:rgba(200,200,200,.7)!important}
+.dark #bplay{background:var(--a)!important;color:#000!important;border:1px solid var(--a)!important}
+.dark .cbtns button:hover{color:var(--a)!important}
+.dark #bplay,
+.dark .cbtns #bplay,
+.dark #controls #bplay {
+  background: #f0a030 !important;
+  color: #000 !important;
+  border: 1px solid #f0a030 !important;
+  -webkit-text-fill-color: #000 !important;
+}
+
+.dark .cbtns button {
+  color: rgba(200,200,200,0.7) !important;
+  -webkit-text-fill-color: rgba(200,200,200,0.7) !important;
+}
+
+.dark .cbtns button:hover {
+  color: #f0a030 !important;
+  -webkit-text-fill-color: #f0a030 !important;
+}
+.dark #controls * {
+  -webkit-text-fill-color: initial !important;
+}
+
+.dark .ctime {
+  color: rgba(200,200,200,0.45) !important;
+  -webkit-text-fill-color: rgba(200,200,200,0.45) !important;
+}
+
+.dark .coff {
+  color: rgba(200,200,200,0.45) !important;
+}
+
+.dark .coff span {
+  color: rgba(200,200,200,0.45) !important;
+  -webkit-text-fill-color: rgba(200,200,200,0.45) !important;
+}
+
+.dark .coff button {
+  color: rgba(200,200,200,0.5) !important;
+  -webkit-text-fill-color: rgba(200,200,200,0.5) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+.dark .coff button:hover {
+  color: #f0a030 !important;
+  -webkit-text-fill-color: #f0a030 !important;
+  border-color: #f0a030 !important;
+}
+
+.dark #ptrack {
+  background: rgba(255,255,255,0.06) !important;
+}
+
+.dark #pfill {
+  background: #f0a030 !important;
+}
+
+.dark #controls {
+  border-top-color: rgba(255,255,255,0.04) !important;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-family:var(--fb);-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top,0)}
+#app{padding-top:env(safe-area-inset-top,0)}
+#bat{position:absolute;top:14px;right:180px;display:flex;align-items:center;gap:6px;font-family:var(--fm);font-size:.62rem;color:var(--t2);pointer-events:none;z-index:2}
+.bat-icon{display:inline-flex;align-items:center;gap:0;border:1px solid var(--t3);border-radius:3px;padding:2px 1px;width:24px;height:12px;position:relative}
+.bat-icon::after{content:'';position:absolute;right:-4px;top:3px;width:2px;height:6px;background:var(--t3);border-radius:0 1px 1px 0}
+.bat-fill{height:100%;border-radius:1px;transition:width .5s,background .5s}
+.bat-low{color:#e55}
+.bat-chg::after{content:'⚡';font-size:14px;position:relative;top:-2px;animation:chgPulse 1.5s ease infinite}
+@keyframes chgPulse{0%,100%{opacity:1}50%{opacity:.3}}
+#topbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:14px 28px;backdrop-filter:blur(24px) saturate(1.6);background:rgba(8,8,12,.65);border-bottom:1px solid var(--b);transition:transform .35s cubic-bezier(.22,1,.36,1),opacity .3s;transform:translateY(0);opacity:1}
+#topbar.hide{transform:translateY(-110%);opacity:0;pointer-events:none}
+.meta h1{font-family:var(--fd);font-size:1.25rem;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta p{font-family:var(--fm);font-size:.7rem;color:var(--t2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.actions{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
 #bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .orb{position:absolute;border-radius:50%;filter:blur(120px);will-change:transform}
 .o1{width:60vmax;height:60vmax;background:radial-gradient(circle,#1a103a,transparent 70%);top:-20%;left:-10%;animation:d1 25s ease-in-out infinite alternate}
@@ -47,7 +129,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 .ebtns button:hover{border-color:var(--a);color:var(--a)}
 .ebtns .pri{background:var(--a);color:var(--bg);border-color:var(--a)}
 .ebtns .pri:hover{filter:brightness(1.15)}
-#controls{flex-shrink:0;backdrop-filter:blur(24px);background:rgba(8,8,12,.6);border-top:1px solid var(--b);padding:0 28px 14px}
+#controls{flex-shrink:0;backdrop-filter:blur(24px);background:rgba(8,8,12,.6);border-top:1px solid var(--b);padding:0 28px 14px;transition:transform .35s cubic-bezier(.22,1,.36,1),opacity .3s;transform:translateY(0);opacity:1}
+#controls.hide{transform:translateY(110%);opacity:0;pointer-events:none}
 #prog{padding:10px 0 6px}
 #ptrack{height:3px;background:rgba(255,255,255,.08);border-radius:2px}
 #pfill{height:100%;background:var(--a);border-radius:2px;width:0%;transition:width .12s linear}
@@ -97,21 +180,30 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 #logbody{flex:1;overflow-y:auto;padding:8px 14px;font-family:var(--fm);font-size:.62rem;line-height:1.7;color:var(--t2);scrollbar-width:none}
 #logbody::-webkit-scrollbar{display:none}
 @media(max-width:640px){#topbar{padding:10px 16px}.meta h1{font-size:1rem}.actions button{padding:6px 10px;font-size:.6rem}.ll{padding:8px 24px;font-size:1.1rem}.ll.on{font-size:1.4rem}#controls{padding:0 16px 10px}.crow{flex-wrap:wrap;gap:8px}.coff{margin-left:0}#logpanel{width:90vw;right:5vw}}
+@media(max-width:640px){
+  #topbar{padding:10px 14px;gap:8px;border-radius:0 0 var(--r) var(--r)}
+  .meta h1{font-size:.95rem}
+  .actions button{padding:5px 8px;font-size:.58rem}
+  #viewport{padding-top:8px}
+}
 </style>
 </head>
 <body>
 <div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 <div id="app">
 <header id="topbar">
-<div class="meta">
+<div class="meta" style="min-width:0;flex:1">
 <h1><span class="dot" id="dot"></span><span id="t-title">LyricFlow</span></h1>
 <p id="t-artist">连接中...</p>
+<span id="bat" style="display:none"></span>
 </div>
 <div class="actions">
 <button onclick="toggleFs()">全屏</button>
-<button onclick="openModal('search')">搜索歌词</button>
-<button onclick="openModal('paste')">粘贴歌词</button>
-<button onclick="document.getElementById('flrc').click()">上传 .lrc</button>
+<button id="btn-dk" onclick="toggleDark()" title="纯黑模式" style="opacity:.5">纯黑</button>
+<button id="btn-t2s" onclick="toggleT2S()" title="简繁切换" style="opacity:.5">简/繁</button>
+<button onclick="openModal('search')">搜索</button>
+<button onclick="openModal('paste')">粘贴</button>
+<button onclick="document.getElementById('flrc').click()">.lrc</button>
 </div>
 </header>
 <section id="viewport">
@@ -167,12 +259,171 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 <button id="logbtn" onclick="toggleLog()">Log</button>
 <div id="logpanel"><div id="loghead"><h3>Debug Log</h3><button onclick="toggleLog()">&times;</button></div><div id="logbody"></div></div>
 <script>
+/* ── 悬浮顶栏：点击歌词区自动隐藏，点击边缘或按 H 显示 ── */
+var topbarTimer = null;
+var vp = el('viewport');
+/* ── 底部控制栏：自动隐藏/显示 ── */
+var controlsTimer = null;
+function showControls(){
+  el('controls').classList.remove('hide');
+  clearTimeout(controlsTimer);
+  controlsTimer = setTimeout(function(){ el('controls').classList.add('hide'); }, 6000);
+}
+function showTopbar(){
+  el('topbar').classList.remove('hide');
+  clearTimeout(topbarTimer);
+  topbarTimer = setTimeout(function(){ el('topbar').classList.add('hide'); }, 6000);
+}
+
+/* 点击视口区域 → 隐藏 */
+vp.addEventListener('click', function(e){
+  if(e.target.closest('.ll') || e.target === vp || e.target.closest('#scroller') || e.target.closest('.spacer')){
+    showTopbar();
+    showControls();
+    setTimeout(function(){
+      el('topbar').classList.add('hide');
+      el('controls').classList.add('hide');
+    }, 3000);
+  }
+}, {passive:true});
+/* ── 底部控制栏：自动隐藏/显示 ── */
+
+/* 触摸屏幕边缘顶部 50px → 显示 */
+document.addEventListener('touchstart', function(e){
+  var y = e.touches[0].clientY;
+  var h = window.innerHeight;
+  if(y < 50) showTopbar();
+  if(y > h - 80) showControls();
+}, {passive:true});
+
+/* 按 H 键切换 */
+document.addEventListener('keydown', function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if(e.key==='h'||e.key==='H'){
+  var tbHidden = el('topbar').classList.contains('hide');
+  var cbHidden = el('controls').classList.contains('hide');
+  if(tbHidden||cbHidden){ showTopbar(); showControls(); }
+  else{ el('topbar').classList.add('hide'); el('controls').classList.add('hide'); }
+}
+});
+
+/* 初始 6 秒后自动隐藏（移动端） */
+if(window.innerWidth <= 640){
+  topbarTimer = setTimeout(function(){ el('topbar').classList.add('hide'); }, 6000);
+  controlsTimer = setTimeout(function(){ el('controls').classList.add('hide'); }, 6000);
+}
+function toggleDark(){
+  var root = document.documentElement;
+  var on = root.classList.contains('dark');
+  if(on) root.classList.remove('dark'); else root.classList.add('dark');
+  var b = el('btn-dk');
+  if(b){ b.style.opacity = on ? '.5' : '1'; b.style.borderColor = on ? '' : 'var(--a)'; b.style.color = on ? '' : 'var(--a)'; }
+  try{ localStorage.setItem('lf_dark', on ? '0' : '1'); }catch(e){}
+}
+(function(){
+  var saved = '';
+  try{ saved = localStorage.getItem('lf_dark'); }catch(e){}
+  if(saved === '1'){
+    document.documentElement.classList.add('dark');
+    setTimeout(function(){
+      var b = el('btn-dk');
+      if(b){ b.style.opacity='1'; b.style.borderColor='var(--a)'; b.style.color='var(--a)'; }
+    }, 200);
+  }
+})();
+(function(){
+  var saved = '';
+  try{ saved = localStorage.getItem('lf_dark'); }catch(e){}
+  if(saved === '1'){
+    document.documentElement.classList.add('dark');
+    setTimeout(function(){ var b = el('btn-dk'); if(b){ b.style.opacity='1'; b.style.borderColor='var(--a)'; b.style.color='var(--a)'; }}, 200);
+  }
+})();
+
+/* ── 阻止息屏 ── */
+var _wakeLockObj = null;
+var _wakeLockVideo = null;
+
+function startWakeLock(){
+  /* 方案 A: Wake Lock API (Chrome 84+, Edge) */
+  if('wakeLock' in navigator && document.visibilityState === 'visible'){
+    navigator.wakeLock.request('screen').then(function(lock){
+      _wakeLockObj = lock;
+      lock.addEventListener('release', function(){ _wakeLockObj = null; });
+    }).catch(function(){});
+    return;
+  }
+  /* 方案 B: 视频回退 (所有浏览器) */
+  if(!_wakeLockVideo){
+    try{
+      _wakeLockVideo = document.createElement('video');
+      _wakeLockVideo.setAttribute('playsinline', '');
+      _wakeLockVideo.setAttribute('muted', '');
+      _wakeLockVideo.style.cssText = 'position:fixed;width:1px;height:1px;left:-999px;opacity:0;pointer-events:none';
+      var canvas = document.createElement('canvas');
+      canvas.width = 2; canvas.height = 2;
+      _wakeLockVideo.src = canvas.toDataURL('video/webm');
+      _wakeLockVideo.loop = true;
+      document.body.appendChild(_wakeLockVideo);
+      _wakeLockVideo.play().catch(function(){});
+    }catch(e){}
+  }
+}
+
+function stopWakeLock(){
+  if(_wakeLockObj){ try{ _wakeLockObj.release(); }catch(e){} _wakeLockObj = null; }
+  if(_wakeLockVideo){ try{ _wakeLockVideo.pause(); }catch(e){} }
+}
+
+/* 启动 */
+startWakeLock();
+
+/* 页面可见性变化时重新获取 */
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible'){
+    startWakeLock();
+  }
+});
 function toggleFs(){
 if(!document.fullscreenElement){document.documentElement.requestFullscreen().catch(function(){})}
 else{document.exitFullscreen()}
 }
 var S={lyrics:[],idx:-1,offset:0,userScroll:false,autoScrolling:false,scrollY:0,position:0,duration:0,estDur:0,isPlaying:false};
 var ws=null;
+/* ── 电量显示 ── */
+(function(){
+  var batEl = el('bat');
+  if(!batEl) return;
+  var level = -1, charging = false, supported = false;
+
+  function renderBat(){
+    if(!supported || level < 0) return;
+    batEl.style.display = 'flex';
+    var pct = Math.round(level * 100);
+    var color = pct <= 20 ? '#e55' : pct <= 50 ? '#f0a030' : '#5c5';
+    batEl.className = charging ? 'bat-chg' : (pct <= 20 ? 'bat-low' : '');
+    batEl.innerHTML =
+      '<span class="bat-icon"><span class="bat-fill" style="width:' + pct + '%;background:' + color + '"></span></span>' +
+      '<span>' + pct + '%</span>';
+  }
+
+  function onBattery(bm){
+    supported = true;
+    level = bm.level;
+    charging = bm.charging;
+    renderBat();
+    bm.addEventListener('levelchange', function(){ level = bm.level; renderBat(); });
+    bm.addEventListener('chargingchange', function(){ charging = bm.charging; renderBat(); });
+  }
+
+  if('getBattery' in navigator){
+    navigator.getBattery().then(onBattery).catch(function(){
+      /* 回退：从 HTTP header 或无 */
+    });
+  } else {
+    batEl.style.display = 'none';
+  }
+})();
 function el(id){return document.getElementById(id)}
 function fmt(s){if(!isFinite(s)||s<0)s=0;var m=Math.floor(s/60),sc=Math.floor(s%60);return m+':'+(sc<10?'0':'')+sc}
 function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
