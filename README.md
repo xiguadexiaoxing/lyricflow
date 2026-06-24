@@ -22,3 +22,4 @@ node server.js
 ```bash
 MUSIC_DIR="D:\Music" node server.js
 ```
+关闭外网访问后，ipv6和外网地址不可用
