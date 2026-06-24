@@ -8,53 +8,71 @@ const fs = require('fs');
 
 let WebSocketServer;
 try { WebSocketServer = require('ws').WebSocketServer; }
-catch (e) { console.error('请先运行: npm install ws'); process.exit(1); }
+catch (e) { console.error('npm install ws'); process.exit(1); }
 
 const PORT = 3721;
 const MUSIC_DIR = process.env.MUSIC_DIR || '';
 const PLAT = os.platform();
+
+var allowExternal = false; // false=仅局域网 true=允许外网
+
+function isLocalAddr(addr) {
+    if (!addr) return true;
+    if (addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1') return true;
+    if (addr.startsWith('::ffff:')) addr = addr.substring(7);
+    if (addr.startsWith('192.168.')) return true;
+    if (addr.startsWith('10.')) return true;
+    if (addr.startsWith('172.')) {
+        var s = parseInt(addr.split('.')[1]);
+        if (s >= 16 && s <= 31) return true;
+    }
+    if (addr.startsWith('fe80')) return true;
+    return false;
+}
 
 const S = { connected: false, title: '', artist: '', position: 0, isPlaying: false, lyrics: null, lyricsSource: '', trackKey: '', lastTick: Date.now(), estDur: 0 };
 const clients = new Set();
 const lyricsCache = new Map();
 const localLRC = new Map();
 const logs = [];
+const startTime = Date.now();
 
 function log(m) {
     const l = '[' + new Date().toLocaleTimeString() + '] ' + m;
-    console.log('  ' + l); logs.push(l); if (logs.length > 200) logs.shift();
+    console.log('  ' + l);
+    logs.push(l);
+    if (logs.length > 200) logs.shift();
     broadcast('log', { message: l });
 }
 
-/* ═══ LRC 解析器 ═══ */
-/* ═══ LRC 解析器 — 纯字符操作，不用正则 ═══ */
+function broadcast(type, data) {
+    var msg = JSON.stringify({ type: type, data: data });
+    clients.forEach(function(ws) { if (ws.readyState === 1) ws.send(msg); });
+}
+
+/* ═══ LRC Parser ═══ */
 function parseLRC(text) {
     if (!text || typeof text !== 'string') return { lyrics: [], meta: {} };
     if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
     var result = [], meta = {};
     var lines = text.split(/[\r\n]+/);
-
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
         if (!line || line.length < 3) continue;
-
         var times = [];
         var pos = 0;
         var lastTimeEnd = 0;
-
         while (pos < line.length && line.charCodeAt(pos) === 91) {
             var close = -1;
             for (var c = pos + 1; c < line.length; c++) {
                 if (line.charCodeAt(c) === 93) { close = c; break; }
             }
             if (close === -1) break;
-
             var inner = line.substring(pos + 1, close);
             var colonIdx = -1;
             for (var c2 = 0; c2 < inner.length; c2++) {
                 if (inner.charCodeAt(c2) === 58) { colonIdx = c2; break; }
             }
-
             if (colonIdx > 0) {
                 var min = parseInt(inner.substring(0, colonIdx), 10);
                 var rest = inner.substring(colonIdx + 1);
@@ -64,9 +82,8 @@ function parseLRC(text) {
                     var cc = rest.charCodeAt(c3);
                     if (cc === 46 || cc === 58) { dotIdx = c3; break; }
                 }
-                if (dotIdx === -1) {
-                    sec = parseInt(rest, 10);
-                } else {
+                if (dotIdx === -1) { sec = parseInt(rest, 10); }
+                else {
                     sec = parseInt(rest.substring(0, dotIdx), 10);
                     var frac = rest.substring(dotIdx + 1);
                     if (frac.length === 1) ms = parseInt(frac, 10) * 100;
@@ -77,16 +94,9 @@ function parseLRC(text) {
                     times.push(min * 60 + sec + ms / 1000);
                     lastTimeEnd = close + 1;
                 } else { break; }
-            } else {
-                if (times.length === 0) {
-                    var mc = inner.indexOf(':');
-                    if (mc > 0) meta[inner.substring(0, mc).toLowerCase().trim()] = inner.substring(mc + 1).trim();
-                }
-                break;
-            }
+            } else { break; }
             pos = close + 1;
         }
-
         if (times.length > 0) {
             var txt = line.substring(lastTimeEnd).trim();
             if (txt.length > 0) {
@@ -96,14 +106,12 @@ function parseLRC(text) {
             }
         }
     }
-
     result.sort(function(a, b) { return a.time - b.time; });
-    return { lyrics: result, meta };
+    return { lyrics: result, meta: meta };
 }
 
-
-/* ═══ HTTP 请求 ═══ */
-var UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+/* ═══ HTTP ═══ */
+var UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
 function httpGet(url, redir) {
     redir = redir === undefined ? 3 : redir;
@@ -146,66 +154,46 @@ function httpPost(url, body) {
     });
 }
 
-/* ═══ LRCLIB (与 BetterLyrics 相同数据源) ═══ */
+/* ═══ LRCLIB ═══ */
 async function fetchLRCLIB(title, artist) {
     log('LRCLIB: ' + (artist || '?') + ' - ' + title);
     var q = 'track_name=' + encodeURIComponent(title); if (artist) q += '&artist_name=' + encodeURIComponent(artist);
     var r = await httpGet('https://lrclib.net/api/get?' + q);
     if (r.status === 200 && r.data && r.data.syncedLyrics) {
         var p = parseLRC(r.data.syncedLyrics);
-        if (p.lyrics.length) { log('LRCLIB精确: ' + p.lyrics.length + '行'); return { lyrics: p.lyrics, meta: p.meta, source: 'lrclib' }; }
+        if (p.lyrics.length) { log('LRCLIB: ' + p.lyrics.length); return { lyrics: p.lyrics, meta: p.meta, source: 'lrclib' }; }
     }
     r = await httpGet('https://lrclib.net/api/search?' + q);
     if (r.status === 200 && Array.isArray(r.data)) {
         for (var i = 0; i < r.data.length; i++) {
             if (r.data[i].syncedLyrics) {
                 var p2 = parseLRC(r.data[i].syncedLyrics);
-                if (p2.lyrics.length) { log('LRCLIB搜索: ' + p2.lyrics.length + '行'); return { lyrics: p2.lyrics, meta: p2.meta, source: 'lrclib' }; }
+                if (p2.lyrics.length) return { lyrics: p2.lyrics, meta: p2.meta, source: 'lrclib' };
             }
         }
     }
-    if (artist) {
-        r = await httpGet('https://lrclib.net/api/search?track_name=' + encodeURIComponent(title));
-        if (r.status === 200 && Array.isArray(r.data)) {
-            for (var k = 0; k < r.data.length; k++) {
-                if (r.data[k].syncedLyrics) {
-                    var p3 = parseLRC(r.data[k].syncedLyrics);
-                    if (p3.lyrics.length) { log('LRCLIB宽搜: ' + p3.lyrics.length + '行'); return { lyrics: p3.lyrics, meta: p3.meta, source: 'lrclib' }; }
-                }
-            }
-        }
-    }
-    log('LRCLIB: 未找到');
     return null;
 }
 
-/* ═══ 网易云音乐 ═══ */
+/* ═══ NetEase ═══ */
 async function fetchNetEase(title, artist) {
     var keyword = (artist ? artist + ' ' : '') + title;
-    log('网易云: ' + keyword);
+    log('NetEase: ' + keyword);
     var body = 's=' + encodeURIComponent(keyword) + '&type=1&limit=5&offset=0';
     var sr = await httpPost('https://music.163.com/api/search/get', body);
-    if (sr.status !== 200 || !sr.data || !sr.data.result || !sr.data.result.songs || !sr.data.result.songs.length) {
-        log('网易云: 无结果'); return null;
-    }
+    if (sr.status !== 200 || !sr.data || !sr.data.result || !sr.data.result.songs || !sr.data.result.songs.length) return null;
     var songs = sr.data.result.songs;
-    log('网易云: ' + songs.length + '首');
     var tl = title.toLowerCase();
     var best = songs[0];
     for (var i = 0; i < songs.length; i++) { if (songs[i].name && songs[i].name.toLowerCase() === tl) { best = songs[i]; break; } }
-    log('匹配: ' + (best.name || '?') + ' id=' + best.id);
-
-    // 专用歌词请求
     var lyric = await neteaseLyricGet(best.id);
     if (lyric) {
         var p = parseLRC(lyric);
         if (p.lyrics.length) {
-            log('网易云歌词: ' + p.lyrics.length + '行');
             var ar = best.artists ? best.artists.map(function(a) { return a.name; }).join(', ') : artist;
             return { lyrics: p.lyrics, meta: { ti: title, ar: ar }, source: 'netease' };
         }
     }
-    log('网易云歌词为空');
     return null;
 }
 
@@ -225,15 +213,7 @@ function neteaseLyricGet(id) {
                     var j = JSON.parse(d);
                     for (var key of ['lrc', 'klyric', 'tlyric']) {
                         if (j[key] && typeof j[key] === 'object' && j[key].lyric && j[key].lyric.trim().length > 5) {
-                            log('歌词字段: ' + key + ' (' + j[key].lyric.length + '字)');
                             resolve(j[key].lyric); return;
-                        }
-                    }
-                    // 调试
-                    for (var key2 of ['lrc', 'klyric', 'tlyric']) {
-                        if (j[key2]) {
-                            var val = typeof j[key2] === 'object' ? JSON.stringify(j[key2]).substring(0, 100) : String(j[key2]).substring(0, 100);
-                            log(key2 + ': ' + val);
                         }
                     }
                     resolve(null);
@@ -267,7 +247,7 @@ async function searchNetEase(track, artist) {
     return results.filter(function(r) { return r.hasSynced; });
 }
 
-/* ═══ 本地 .lrc 索引 ═══ */
+/* ═══ Local LRC ═══ */
 function buildLRCIndex(dir) {
     if (!dir || !fs.existsSync(dir)) return;
     var c = 0;
@@ -287,7 +267,7 @@ function buildLRCIndex(dir) {
             });
         } catch (ex) {}
     })(dir, 0);
-    log('本地 .lrc: ' + c + '个');
+    log('LRC index: ' + c);
 }
 
 function findLocalLRC(title, artist) {
@@ -304,7 +284,7 @@ function findLocalLRC(title, artist) {
     return null;
 }
 
-/* ═══ 歌词管理 ═══ */
+/* ═══ Lyrics Manager ═══ */
 async function ensureLyrics(title, artist) {
     var key = ((artist || '') + '|||' + title).toLowerCase();
     if (lyricsCache.has(key)) return lyricsCache.get(key);
@@ -314,26 +294,20 @@ async function ensureLyrics(title, artist) {
         var raw = findLocalLRC(title, artist);
         if (raw) { var p = parseLRC(raw); if (p.lyrics.length) { var r = { lyrics: p.lyrics, meta: p.meta, source: 'local' }; lyricsCache.set(key, r); return r; } }
     }
-
     var lr = await fetchLRCLIB(title, artist);
     if (lr && lr.lyrics.length) { lyricsCache.set(key, lr); return lr; }
-
     var ne = await fetchNetEase(title, artist);
     if (ne && ne.lyrics.length) { lyricsCache.set(key, ne); return ne; }
-
     lyricsCache.set(key, null);
     return null;
 }
 
-function broadcast(type, data) { var msg = JSON.stringify({ type: type, data: data }); clients.forEach(function(ws) { if (ws.readyState === 1) ws.send(msg); }); }
-
-/* ═══ 窗口标题检测桥接 ═══ */
+/* ═══ Bridge ═══ */
 var bridgeProc = null;
 var psCounter = 0;
-/* ═══ SMTC 独立轮询（暂停/播放状态） ═══ */
+
 function startSMTCPoll() {
     if (PLAT !== 'win32') return;
-
     var smtcScript = [
         "$ErrorActionPreference = 'SilentlyContinue'",
         "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
@@ -372,14 +346,9 @@ function startSMTCPoll() {
         "  Start-Sleep -Milliseconds 1500",
         "}",
     ].join('\r\n');
-
-    var smtcPath = path.join(os.tmpdir(), 'lyricflow_smtc_poll.ps1');
+    var smtcPath = path.join(os.tmpdir(), 'lyricflow_smtc.ps1');
     fs.writeFileSync(smtcPath, '\uFEFF' + smtcScript, 'utf8');
-
-    var smtcProc = spawn('powershell.exe', [
-        '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', smtcPath
-    ], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
-
+    var smtcProc = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', smtcPath], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
     var smtcBuf = '';
     smtcProc.stdout.setEncoding('utf8');
     smtcProc.stdout.on('data', function(chunk) {
@@ -392,7 +361,7 @@ function startSMTCPoll() {
             var playing = (line === 'Playing');
             if (S.isPlaying !== playing) {
                 S.isPlaying = playing;
-                log('播放状态: ' + (playing ? '播放' : '暂停'));
+                log('State: ' + (playing ? 'Play' : 'Pause'));
                 broadcast('position', { position: S.position, isPlaying: S.isPlaying, duration: S.estDur });
             }
         }
@@ -400,27 +369,28 @@ function startSMTCPoll() {
     smtcProc.stderr.on('data', function() {});
     smtcProc.on('close', function() { setTimeout(startSMTCPoll, 5000); });
     smtcProc.on('error', function() {});
-    log('SMTC 状态轮询已启动');
+    log('SMTC poll started');
 }
+
 function startBridge() {
-    log('启动窗口标题检测...');
+    log('Starting bridge...');
     if (PLAT === 'win32') {
-var lines = [
-    "$ErrorActionPreference = 'SilentlyContinue'",
-    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
-    "",
-    "$pl = @('cloudmusic','QQMusic','Spotify','foobar2000','MusicBee','vlc','AIMP','iTunes','wmplayer')",
-    "while ($true) {",
-    "  $fnd = $false; $pn = ''; $wt = ''",
-    "  foreach ($n in $pl) {",
-    "    $p = Get-Process -Name $n -EA SilentlyContinue | Where-Object { $_.MainWindowTitle -ne '' } | Select -First 1",
-    "    if ($p -and $p.MainWindowTitle.Length -gt 2) { $pn = $n; $wt = $p.MainWindowTitle; $fnd = $true; break }",
-    "  }",
-    "  if (-not $fnd) { Write-Output '{\"e\":\"none\"}' }",
-    "  else { @{p=$pn;t=$wt} | ConvertTo-Json -Compress }",
-    "  Start-Sleep -Milliseconds 500",
-    "}",
-];
+        var lines = [
+            "$ErrorActionPreference = 'SilentlyContinue'",
+            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+            "",
+            "$pl = @('cloudmusic','QQMusic','Spotify','foobar2000','MusicBee','vlc','AIMP','iTunes','wmplayer')",
+            "while ($true) {",
+            "  $fnd = $false; $pn = ''; $wt = ''",
+            "  foreach ($n in $pl) {",
+            "    $p = Get-Process -Name $n -EA SilentlyContinue | Where-Object { $_.MainWindowTitle -ne '' } | Select -First 1",
+            "    if ($p -and $p.MainWindowTitle.Length -gt 2) { $pn = $n; $wt = $p.MainWindowTitle; $fnd = $true; break }",
+            "  }",
+            "  if (-not $fnd) { Write-Output '{\"e\":\"none\"}' }",
+            "  else { @{p=$pn;t=$wt} | ConvertTo-Json -Compress }",
+            "  Start-Sleep -Milliseconds 500",
+            "}",
+        ];
         var psPath = path.join(os.tmpdir(), 'lyricflow_bridge.ps1');
         fs.writeFileSync(psPath, '\uFEFF' + lines.join('\r\n'), 'utf8');
         bridgeProc = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', psPath], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
@@ -428,42 +398,35 @@ var lines = [
         var sh = path.join(os.tmpdir(), 'lf_bridge.sh');
         fs.writeFileSync(sh, '#!/bin/bash\nwhile true; do\n  T=$(playerctl metadata xesam:title 2>/dev/null)\n  A=$(playerctl metadata xesam:artist 2>/dev/null)\n  if [ -n "$T" ]; then\n    echo "{\"p\":\"playerctl\",\"t\":\"$T\",\"a\":\"$A\"}"\n  else\n    echo \'{"e":"none"}\'\n  fi\n  sleep 0.5\ndone', 'utf8');
         bridgeProc = spawn('bash', [sh], { stdio: ['pipe', 'pipe', 'pipe'] });
-    } else { log('平台不支持'); return; }
+    } else { log('Unsupported platform'); return; }
 
     var buf = '';
     bridgeProc.stdout.setEncoding('utf8');
     bridgeProc.stdout.on('data', function(chunk) {
-        buf += chunk; var idx;
+        buf += chunk;
+        var idx;
         while ((idx = buf.indexOf('\n')) !== -1) {
-            var line = buf.substring(0, idx).trim(); buf = buf.substring(idx + 1);
+            var line = buf.substring(0, idx).trim();
+            buf = buf.substring(idx + 1);
             if (!line.startsWith('{')) continue;
             try { handleMediaUpdate(JSON.parse(line)); } catch (e) {}
         }
     });
     bridgeProc.stderr.on('data', function() {});
-    bridgeProc.on('close', function(code) { log('桥接退出(' + code + ')'); setTimeout(startBridge, 5000); });
-    bridgeProc.on('error', function(e) { log('桥接错误: ' + e.message); });
-    log('桥接已启动');
+    bridgeProc.on('close', function(code) { log('Bridge exit(' + code + ')'); setTimeout(startBridge, 5000); });
+    bridgeProc.on('error', function(e) { log('Bridge err: ' + e.message); });
+    log('Bridge started');
 }
 
-/* ═══ 媒体更新处理 ═══ */
-/* ═══ 媒体更新处理 ═══ */
+/* ═══ Media Update ═══ */
 var pendingKey = '';
 function handleMediaUpdate(d) {
-    if (d.e === 'none') {
-        if (S.connected) { S.connected = false; S.isPlaying = false; broadcast('status', { connected: false }); }
-        return;
-    }
-    if (!S.connected) { S.connected = true; log('检测到: ' + d.p); broadcast('status', { connected: true }); }
+    if (d.e === 'none') { if (S.connected) { S.connected = false; S.isPlaying = false; broadcast('status', { connected: false }); } return; }
+    if (!S.connected) { S.connected = true; log('Detected: ' + d.p); broadcast('status', { connected: true }); }
 
     var song, artist;
     if (d.a) { song = d.t; artist = d.a; }
-    else {
-        var raw = d.t || '';
-        var sep = raw.indexOf(' - ');
-        if (sep > 0 && sep < raw.length - 3) { song = raw.substring(0, sep).trim(); artist = raw.substring(sep + 3).trim(); }
-        else { song = raw; artist = ''; }
-    }
+    else { var raw = d.t || ''; var sep = raw.indexOf(' - '); if (sep > 0 && sep < raw.length - 3) { song = raw.substring(0, sep).trim(); artist = raw.substring(sep + 3).trim(); } else { song = raw; artist = ''; } }
     if (!song || song.length < 1) return;
 
     var now = Date.now(), elapsed = (now - S.lastTick) / 1000;
@@ -471,27 +434,16 @@ function handleMediaUpdate(d) {
     var newKey = ((artist || '') + '|||' + song).toLowerCase();
 
     if (newKey !== S.trackKey && newKey !== pendingKey) {
-        S.trackKey = newKey;
-        S.title = song;
-        S.artist = artist;
-        S.position = 0;
-        S.isPlaying = true;
-        pendingKey = newKey;
-        log('曲目: ' + (artist || '?') + ' - ' + song);
+        S.trackKey = newKey; S.title = song; S.artist = artist; S.position = 0; S.isPlaying = true; pendingKey = newKey;
+        log('Track: ' + (artist || '?') + ' - ' + song);
         broadcast('track', { title: song, artist: artist });
-
         ensureLyrics(song, artist).then(function(result) {
             if (result && result.lyrics.length) {
-                S.lyrics = result.lyrics;
-                S.lyricsSource = result.source;
+                S.lyrics = result.lyrics; S.lyricsSource = result.source;
                 S.estDur = result.lyrics[result.lyrics.length - 1].time + 15;
                 broadcast('lyrics', { lyrics: result.lyrics, source: result.source });
-                log('歌词加载: ' + result.source + ' ' + result.lyrics.length + '行');
-            } else {
-                S.lyrics = null;
-                S.lyricsSource = '';
-                broadcast('lyrics', { lyrics: null, source: 'not_found' });
-            }
+                log('Lyrics: ' + result.source + ' ' + result.lyrics.length + ' lines');
+            } else { S.lyrics = null; S.lyricsSource = ''; broadcast('lyrics', { lyrics: null, source: 'not_found' }); }
             pendingKey = '';
         });
     } else if (S.isPlaying && elapsed < 2 && newKey === S.trackKey) {
@@ -500,7 +452,7 @@ function handleMediaUpdate(d) {
     broadcast('position', { position: S.position, isPlaying: S.isPlaying, duration: S.estDur });
 }
 
-/* ═══ 媒体键 ═══ */
+/* ═══ Media Keys ═══ */
 var VK = { toggle: 179, next: 176, prev: 177 };
 function sendMediaKey(key) {
     var vk = VK[key]; if (!vk) return;
@@ -516,163 +468,233 @@ function sendMediaKey(key) {
     }
 }
 
-/* ═══ HTTP + WebSocket ═══ */
+/* ═══ HTTP Server ═══ */
 var HTML;
 try { HTML = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8'); }
-catch (e) { console.error('\n  找不到 index.html\n'); process.exit(1); }
+catch (e) { console.error('  index.html not found'); process.exit(1); }
+
+var ADMIN_HTML = null;
+try { ADMIN_HTML = fs.readFileSync(path.join(__dirname, 'admin.html'), 'utf8'); } catch(e) {}
 
 var server = http.createServer(function(req, res) {
+        // 外网访问控制
+    var clientIp = req.socket.remoteAddress || '';
+    if (!allowExternal && !isLocalAddr(clientIp)) {
+        res.writeHead(403, { 'Content-Type': 'text/plain' });
+        res.end('External access disabled');
+        return;
+    }
     var url = req.url.split('?')[0];
-    if (url === '/' || url === '/index.html') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(HTML); }
-    else { res.writeHead(404); res.end(); }
+    var qs = null;
+    try { qs = new URL(req.url, 'http://localhost').searchParams; } catch(e) {}
+
+    if (url === '/' || url === '/index.html') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(HTML);
+    }
+    else if (url === '/admin' && ADMIN_HTML) {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(ADMIN_HTML);
+    }
+    else if (url === '/api/status') {
+        var uptime = Math.floor((Date.now() - startTime) / 1000);
+        var mem = process.memoryUsage();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            uptime: uptime, connected: S.connected, title: S.title, artist: S.artist,
+            position: S.position, isPlaying: S.isPlaying, estDur: S.estDur,
+            lyricsSource: S.lyricsSource, lyricsCount: S.lyrics ? S.lyrics.length : 0,
+            clients: clients.size, cacheSize: lyricsCache.size, lrcIndexSize: localLRC.size,
+            memMB: (mem.rss / 1048576).toFixed(1), platform: PLAT,
+            musicDir: MUSIC_DIR || '(none)', port: PORT
+        }));
+    }
+    else if (url === '/api/lyrics') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        if (S.lyrics && S.lyrics.length) {
+            res.end(JSON.stringify({ lyrics: S.lyrics, source: S.lyricsSource, title: S.title, artist: S.artist }));
+        } else {
+            res.end(JSON.stringify({ lyrics: null }));
+        }
+    }
+    else if (url === '/api/logs') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(logs.slice(-80)));
+    }
+    else if (url === '/api/clear-cache') {
+        lyricsCache.clear();
+        log('Cache cleared');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+    }
+    else if (url === '/api/key') {
+        var key = qs ? qs.get('key') : null;
+        if (key) sendMediaKey(key);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+    }
+    else if (url === '/api/shutdown') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+        log('Shutdown');
+        setTimeout(function() { process.exit(0); }, 500);
+    }
+        else if (url === '/api/ext') {
+        if (qs) {
+            var val = qs.get('val');
+            if (val === '1') { allowExternal = true; log('外网访问: 开启'); }
+            else if (val === '0') { allowExternal = false; log('外网访问: 关闭'); }
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ allowExternal: allowExternal }));
+    }
+    else {
+        res.writeHead(404);
+        res.end();
+    }
 });
 
 var wss = new WebSocketServer({ server: server });
 wss.on('connection', function(ws) {
-    clients.add(ws); log('浏览器连接');
+        var wsIp = ws._socket ? ws._socket.remoteAddress : '';
+    if (!allowExternal && !isLocalAddr(wsIp)) {
+        ws.close();
+        return;
+    }
+    clients.add(ws);
+    log('Browser connected');
     ws.send(JSON.stringify({ type: 'init', data: { connected: S.connected, title: S.title, artist: S.artist, position: S.position, isPlaying: S.isPlaying, lyrics: S.lyrics, lyricsSource: S.lyricsSource, duration: S.estDur } }));
     ws.send(JSON.stringify({ type: 'logs', data: logs.slice(-50) }));
     ws.on('message', function(raw) {
         try {
-          var msg = JSON.parse(raw.toString());
-          if (msg.type === 'lrc' || msg.type === 'applyLyrics') {
-            var p = parseLRC(msg.data);
-            if (p.lyrics.length) { S.lyrics = p.lyrics; S.lyricsSource = 'manual'; S.estDur = p.lyrics[p.lyrics.length - 1].time + 15; broadcast('lyrics', { lyrics: p.lyrics, source: 'manual' }); }
-          } else if (msg.type === 'search') {
-            (async function() {
-              var results = await searchLRCLIB(msg.data.track, msg.data.artist);
-              var mapped = results.map(function(r) { return { trackName: r.trackName, artistName: r.artistName, albumName: r.albumName, duration: r.duration, hasSynced: !!r.syncedLyrics, syncedLyrics: r.syncedLyrics || null, plainLyrics: r.plainLyrics || null }; });
-              if (mapped.length === 0) mapped = await searchNetEase(msg.data.track, msg.data.artist);
-              ws.send(JSON.stringify({ type: 'searchResults', data: mapped.slice(0, 10) }));
-            })();
-          } else if (msg.type === 'key') { sendMediaKey(msg.data); }
+            var msg = JSON.parse(raw.toString());
+            if (msg.type === 'lrc' || msg.type === 'applyLyrics') {
+                var p = parseLRC(msg.data);
+                if (p.lyrics.length) { S.lyrics = p.lyrics; S.lyricsSource = 'manual'; S.estDur = p.lyrics[p.lyrics.length - 1].time + 15; broadcast('lyrics', { lyrics: p.lyrics, source: 'manual' }); }
+            } else if (msg.type === 'search') {
+                (async function() {
+                    var results = await searchLRCLIB(msg.data.track, msg.data.artist);
+                    var mapped = results.map(function(r) { return { trackName: r.trackName, artistName: r.artistName, albumName: r.albumName, duration: r.duration, hasSynced: !!r.syncedLyrics, syncedLyrics: r.syncedLyrics || null, plainLyrics: r.plainLyrics || null }; });
+                    if (mapped.length === 0) mapped = await searchNetEase(msg.data.track, msg.data.artist);
+                    ws.send(JSON.stringify({ type: 'searchResults', data: mapped.slice(0, 10) }));
+                })();
+            } else if (msg.type === 'key') { sendMediaKey(msg.data); }
         } catch(e) {}
-      });
-    ws.on('close', function() { clients.delete(ws); log('浏览器断开'); });
+    });
+    ws.on('close', function() { clients.delete(ws); log('Browser disconnected'); });
 });
 
+/* ═══ Start ═══ */
+console.log('\n  LyricFlow\n');
+if (MUSIC_DIR) buildLRCIndex(MUSIC_DIR);
+startSMTCPoll();
+startBridge();
+/* ═══ 启动 ═══ */
 /* ═══ 启动 ═══ */
 console.log('\n  LyricFlow\n');
 if (MUSIC_DIR) buildLRCIndex(MUSIC_DIR);
 startSMTCPoll();
 startBridge();
-server.listen(PORT, function() {
-  log('就绪: http://localhost:' + PORT);
-  var ifaces = os.networkInterfaces();
-  var ipv4 = [], ipv6Global = [], ipv6Link = [];
-  Object.keys(ifaces).forEach(function(name) {
-    ifaces[name].forEach(function(iface) {
-      if (iface.internal) return;
-      if (iface.family === 'IPv4') ipv4.push(iface.address);
-      if (iface.family === 'IPv6') {
-        var addr = iface.address;
-        if (addr.indexOf('%') !== -1) {
-          ipv6Link.push(addr.split('%')[0]);
-        } else {
-          ipv6Global.push(addr);
-        }
-      }
-    });
-  });
-  console.log('');
-  console.log('  ==========================================');
-  console.log('  手机浏览器访问:');
-  console.log('');
-  if (ipv4.length) {
-    ipv4.forEach(function(ip) { console.log('    http://' + ip + ':' + PORT); });
-  }
-  if (ipv6Global.length) {
-    ipv6Global.forEach(function(ip) { console.log('    http://[' + ip + ']:' + PORT); });
-  }
-  if (ipv6Link.length) {
-    ipv6Link.forEach(function(ip) { console.log('    http://[' + ip + ']:' + PORT + '  (链路本地)'); });
-  }
-  console.log('');
-  console.log('  连接同一 Wi-Fi 后访问以上地址');
-  console.log('  ==========================================');
-  console.log('');
-});
-/* ═══ HTTPS (安卓电量需要) ═══ */
-/* ═══ HTTPS (安卓电量) ═══ */
-/* ═══ HTTPS (安卓电量) ═══ */
-(function(){
-  var forge;
-  try { forge = require('node-forge'); } catch(e) {
-    console.log('  运行 npm install node-forge 后重启');
-    return;
-  }
-
-  try {
-    var keys = forge.pki.rsa.generateKeyPair(2048);
-    var cert = forge.pki.createCertificate();
-    cert.publicKey = keys.publicKey;
-    cert.serialNumber = '01';
-    cert.validity.notBefore = new Date();
-    cert.validity.notAfter = new Date();
-    cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 1);
-    var attrs = [{ name: 'commonName', value: 'LyricFlow' }];
-    cert.setSubject(attrs);
-    cert.setIssuer(attrs);
-    cert.sign(keys.privateKey, forge.md.sha256.create());
-    var certPem = forge.pki.certificateToPem(cert);
-    var keyPem = forge.pki.privateKeyToPem(keys.privateKey);
-
-    var https = require('https');
-    var HTTPS_PORT = PORT + 1;
-    var httpsServer = https.createServer({ key: keyPem, cert: certPem }, function(req, res) {
-      var url = req.url.split('?')[0];
-      if (url === '/' || url === '/index.html') {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(HTML);
-      } else {
-        res.writeHead(404);
-        res.end();
-      }
-    });
-
-    var wss2 = new WebSocketServer({ server: httpsServer });
-    wss2.on('connection', function(ws) {
-      clients.add(ws);
-      ws.send(JSON.stringify({ type: 'init', data: { connected: S.connected, title: S.title, artist: S.artist, position: S.position, isPlaying: S.isPlaying, lyrics: S.lyrics, lyricsSource: S.lyricsSource, duration: S.estDur } }));
-      ws.send(JSON.stringify({ type: 'logs', data: logs.slice(-50) }));
-      ws.on('message', function(raw) {
-        try {
-          var msg = JSON.parse(raw.toString());
-          wss.clients.forEach(function(c) { if (c.readyState === 1) c.send(raw.toString()); });
-          wss2.clients.forEach(function(c) { if (c.readyState === 1 && c !== ws) c.send(raw.toString()); });
-          if (msg.type === 'lrc' || msg.type === 'applyLyrics') {
-            var p = parseLRC(msg.data);
-            if (p.lyrics.length) { S.lyrics = p.lyrics; S.lyricsSource = 'manual'; S.estDur = p.lyrics[p.lyrics.length - 1].time + 15; broadcast('lyrics', { lyrics: p.lyrics, source: 'manual' }); log('手动: ' + p.lyrics.length + '行'); }
-          } else if (msg.type === 'search') {
-            (async function() {
-              var results = await searchLRCLIB(msg.data.track, msg.data.artist);
-              var mapped = results.map(function(r) { return { trackName: r.trackName, artistName: r.artistName, albumName: r.albumName, duration: r.duration, hasSynced: !!r.syncedLyrics, syncedLyrics: r.syncedLyrics || null, plainLyrics: r.plainLyrics || null }; });
-              if (mapped.length === 0) mapped = await searchNetEase(msg.data.track, msg.data.artist);
-              ws.send(JSON.stringify({ type: 'searchResults', data: mapped.slice(0, 10) }));
-            })();
-          } else if (msg.type === 'key') { sendMediaKey(msg.data); }
-        } catch(e) {}
-      });
-      ws.on('close', function() { clients.delete(ws); });
-    });
-
-    httpsServer.listen(HTTPS_PORT, '0.0.0.0', function() {
-      var ifaces = os.networkInterfaces();
-      console.log('');
-      console.log('  ==========================================');
-      console.log('  HTTPS (电量 + 防息屏):');
-      Object.keys(ifaces).forEach(function(name) {
+server.listen({ port: PORT, host: '::', ipv6Only: false }, function() {
+    log('Ready: http://localhost:' + PORT);
+    var ifaces = os.networkInterfaces();
+    console.log('');
+    console.log('  ===========================================================');
+    console.log('  Pages:');
+    console.log('    http://localhost:' + PORT);
+    Object.keys(ifaces).forEach(function(name) {
         ifaces[name].forEach(function(iface) {
-          if (!iface.internal && iface.family === 'IPv4') {
-            console.log('    https://' + iface.address + ':' + HTTPS_PORT);
-          }
+            if (!iface.internal && iface.family === 'IPv4') console.log('    http://' + iface.address + ':' + PORT + '  (' + name + ')');
         });
-      });
-      console.log('  手机首次访问: 高级 -> 继续访问');
-      console.log('  ==========================================');
-      console.log('');
     });
-    httpsServer.on('error', function(e) { console.log('  HTTPS 错误: ' + e.message); });
-  } catch(e) { console.log('  HTTPS 异常: ' + e.message); }
+    console.log('');
+    console.log('  ===========================================================');
+    console.log('');
+});
+
+/* ═══ HTTPS ═══ */
+(function() {
+    var forge;
+    try { forge = require('node-forge'); } catch(e) {
+        console.log('  node-forge not installed, skipping HTTPS');
+        return;
+    }
+    try {
+        console.log('  Generating HTTPS certificate...');
+        var kp = forge.pki.rsa.generateKeyPair(2048);
+        var crt = forge.pki.createCertificate();
+        crt.publicKey = kp.publicKey;
+        crt.serialNumber = '01';
+        crt.validity.notBefore = new Date();
+        crt.validity.notAfter = new Date();
+        crt.validity.notAfter.setFullYear(crt.validity.notBefore.getFullYear() + 1);
+        crt.setSubject([{ name: 'commonName', value: 'LyricFlow' }]);
+        crt.setIssuer([{ name: 'commonName', value: 'LyricFlow' }]);
+        crt.sign(kp.privateKey, forge.md.sha256.create());
+
+        var HTTPS_PORT = PORT + 1;
+        var hs = https.createServer({
+            key: forge.pki.privateKeyToPem(kp.privateKey),
+            cert: forge.pki.certificateToPem(crt)
+        }, function(req, res) {
+            var u = req.url.split('?')[0];
+            if (u === '/' || u === '/index.html') {
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(HTML);
+            } else {
+                res.writeHead(404);
+                res.end();
+            }
+        });
+
+        var w2 = new WebSocketServer({ server: hs });
+        w2.on('connection', function(ws) {
+                        var wsIp2 = ws._socket ? ws._socket.remoteAddress : '';
+            if (!allowExternal && !isLocalAddr(wsIp2)) { ws.close(); return; }
+            clients.add(ws);
+            ws.send(JSON.stringify({ type: 'init', data: { connected: S.connected, title: S.title, artist: S.artist, position: S.position, isPlaying: S.isPlaying, lyrics: S.lyrics, lyricsSource: S.lyricsSource, duration: S.estDur } }));
+            ws.send(JSON.stringify({ type: 'logs', data: logs.slice(-50) }));
+            ws.on('message', function(raw) {
+                try {
+                    var msg = JSON.parse(raw.toString());
+                    if (msg.type === 'lrc' || msg.type === 'applyLyrics') {
+                        var p = parseLRC(msg.data);
+                        if (p.lyrics.length) { S.lyrics = p.lyrics; S.lyricsSource = 'manual'; S.estDur = p.lyrics[p.lyrics.length - 1].time + 15; broadcast('lyrics', { lyrics: p.lyrics, source: 'manual' }); }
+                    } else if (msg.type === 'search') {
+                        (async function() {
+                            var results = await searchLRCLIB(msg.data.track, msg.data.artist);
+                            var mapped = results.map(function(r) { return { trackName: r.trackName, artistName: r.artistName, albumName: r.albumName, duration: r.duration, hasSynced: !!r.syncedLyrics, syncedLyrics: r.syncedLyrics || null, plainLyrics: r.plainLyrics || null }; });
+                            if (mapped.length === 0) mapped = await searchNetEase(msg.data.track, msg.data.artist);
+                            ws.send(JSON.stringify({ type: 'searchResults', data: mapped.slice(0, 10) }));
+                        })();
+                    } else if (msg.type === 'key') { sendMediaKey(msg.data); }
+                } catch(e) {}
+            });
+            ws.on('close', function() { clients.delete(ws); });
+        });
+
+        hs.on('error', function(e) { console.log('  HTTPS error: ' + e.message); });
+
+hs.listen({ port: HTTPS_PORT, host: '::', ipv6Only: false }, function() {
+            console.log('');
+            console.log('  ===========================================================');
+            console.log('  HTTPS (battery):');
+            console.log('    https://localhost:' + HTTPS_PORT);
+            var nf = os.networkInterfaces();
+            Object.keys(nf).forEach(function(n) {
+                nf[n].forEach(function(i) {
+                    if (!i.internal && i.family === 'IPv4') console.log('    https://' + i.address + ':' + HTTPS_PORT + '  (' + n + ')');
+                });
+            });
+            console.log('  First visit: Advanced -> Continue');
+            console.log('  ===========================================================');
+            console.log('');
+        });
+
+        console.log('  HTTPS starting on port ' + HTTPS_PORT);
+    } catch(e) {
+        console.log('  HTTPS failed: ' + e.message);
+    }
 })();
+
 process.on('SIGINT', function() { if (bridgeProc) bridgeProc.kill(); process.exit(0); });

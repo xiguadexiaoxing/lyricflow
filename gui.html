@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LyricFlow Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,500;1,300&family=DM+Mono:wght@300;400&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0c;--s:#12121a;--s2:#1a1a24;--s3:#22222e;
+  --a:#d4a853;--ag:rgba(212,168,83,.2);
+  --g:#5c5;--r:#e55;
+  --t:#e0dcd4;--t2:rgba(224,220,212,.5);--t3:rgba(224,220,212,.2);--t4:rgba(224,220,212,.07);
+  --b:rgba(255,255,255,.06);--R:12px;--Rs:7px;
+  --fd:'Cormorant Garamond',serif;--fm:'DM Mono',monospace;--fb:'Noto Sans SC',sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--t);font-family:var(--fb);-webkit-font-smoothing:antialiased;overflow:hidden;height:100vh;user-select:none}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+
+/* ── Titlebar ── */
+.titlebar{display:flex;align-items:center;justify-content:space-between;height:34px;padding:0 10px 0 14px;background:rgba(0,0,0,.5);-webkit-app-region:drag;position:relative;z-index:100}
+.titlebar h1{font-family:var(--fd);font-size:.85rem;font-weight:300;color:var(--t2);letter-spacing:.03em}
+.titlebar h1 em{color:var(--a);font-style:italic}
+.tb-btns{display:flex;gap:2px;-webkit-app-region:no-drag}
+.tb-btns button{width:30px;height:22px;border:none;background:transparent;color:var(--t3);font-size:.7rem;cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.tb-btns button:hover{background:rgba(255,255,255,.08);color:var(--t)}
+.tb-btns .close:hover{background:var(--r);color:#fff}
+
+/* ── Layout ── */
+.main{display:flex;flex-direction:column;height:calc(100vh - 34px);overflow:hidden}
+
+/* ── Nav ── */
+.nav{display:flex;gap:3px;padding:8px 12px;flex-shrink:0}
+.nav button{background:var(--s);border:1px solid var(--b);color:var(--t2);font-family:var(--fm);font-size:.55rem;padding:5px 12px;border-radius:100px;cursor:pointer;transition:all .2s;letter-spacing:.03em}
+.nav button:hover,.nav button.on{background:var(--a);color:var(--bg);border-color:var(--a)}
+
+/* ── Sections ── */
+.sections{flex:1;overflow:hidden;position:relative}
+.section{position:absolute;inset:0;padding:0 12px 10px;overflow-y:auto;opacity:0;pointer-events:none;transition:opacity .25s}
+.section.active{opacity:1;pointer-events:auto}
+
+/* ── Card ── */
+.cards{display:flex;flex-direction:column;gap:8px}
+.card{background:var(--s);border:1px solid var(--b);border-radius:var(--R);padding:14px 16px}
+.card h3{font-family:var(--fd);font-size:.9rem;font-weight:400;color:var(--t);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.card h3 .i{opacity:.4;font-size:.75rem}
+.row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--t4)}
+.row:last-child{border-bottom:none}
+.lbl{font-family:var(--fm);font-size:.56rem;color:var(--t3);letter-spacing:.02em}
+.val{font-family:var(--fm);font-size:.56rem;color:var(--t)}
+.val.ac{color:var(--a)}.val.gn{color:var(--g)}.val.rd{color:var(--r)}
+
+/* ── Now Playing ── */
+.np-card{background:linear-gradient(135deg,var(--s) 0%,var(--s2) 100%);border:1px solid var(--b);border-radius:var(--R);padding:18px 20px}
+.np-title{font-family:var(--fd);font-size:1.3rem;font-weight:300;color:var(--t);line-height:1.2;min-height:1.6em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-artist{font-family:var(--fm);font-size:.6rem;color:var(--t3);margin-top:3px}
+.np-status{display:flex;align-items:center;gap:6px;margin-top:8px}
+.np-dot{width:6px;height:6px;border-radius:50%}
+.np-dot.playing{background:var(--g);box-shadow:0 0 8px rgba(92,204,92,.4);animation:pulse 2s ease infinite}
+.np-dot.paused{background:var(--a)}
+.np-dot.off{background:var(--r)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.np-stxt{font-family:var(--fm);font-size:.55rem;color:var(--t2)}
+
+/* ── Progress ── */
+.prog-wrap{margin-top:12px}
+.prog-bar{height:3px;background:var(--s3);border-radius:2px;cursor:pointer;position:relative}
+.prog-fill{height:100%;background:var(--a);border-radius:2px;transition:width .25s linear;position:relative}
+.prog-fill::after{content:'';position:absolute;right:-4px;top:-3px;width:9px;height:9px;background:var(--a);border-radius:50%;opacity:0;transition:opacity .2s}
+.prog-bar:hover .prog-fill::after{opacity:1}
+.prog-times{display:flex;justify-content:space-between;margin-top:4px}
+.prog-times span{font-family:var(--fm);font-size:.5rem;color:var(--t3)}
+
+/* ── Control Buttons ── */
+.ctrl-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px}
+.cbtn{background:var(--s3);border:1px solid var(--b);color:var(--t2);border-radius:50%;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.cbtn:hover{background:rgba(255,255,255,.08);color:var(--t);transform:scale(1.08)}
+.cbtn.play{width:46px;height:46px;background:var(--a);color:var(--bg);border-color:var(--a);font-size:1.1rem}
+.cbtn.play:hover{filter:brightness(1.12);transform:scale(1.08)}
+.cbtn.sm{width:34px;height:34px;font-size:.75rem}
+
+/* ── Action Buttons ── */
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.act{background:var(--s2);border:1px solid var(--b);color:var(--t2);font-family:var(--fm);font-size:.55rem;padding:6px 14px;border-radius:100px;cursor:pointer;transition:all .2s}
+.act:hover{border-color:var(--a);color:var(--a)}
+.act.danger{border-color:rgba(229,85,85,.2);color:var(--r)}
+.act.danger:hover{border-color:var(--r);background:rgba(229,85,85,.08)}
+.act.primary{background:var(--a);color:var(--bg);border-color:var(--a)}
+.act.primary:hover{filter:brightness(1.12)}
+
+/* ── Lyrics Preview ── */
+.lyr-box{max-height:100%;overflow-y:auto;scrollbar-width:thin;padding:4px 0}
+.ll{display:flex;gap:10px;padding:3px 0;font-family:var(--fm);font-size:.55rem;color:var(--t3);transition:color .2s}
+.ll .lt{color:var(--t4);min-width:36px;font-size:.5rem}
+.ll.cur{color:var(--a);font-weight:500}
+
+/* ── Log ── */
+.log-box{background:var(--bg);border:1px solid var(--b);border-radius:var(--Rs);padding:8px 10px;height:100%;overflow-y:auto;scrollbar-width:thin;font-family:var(--fm);font-size:.52rem;line-height:1.7;color:var(--t3)}
+
+/* ── Table ── */
+.tbl{width:100%;border-collapse:collapse;font-family:var(--fm);font-size:.53rem}
+.tbl th{text-align:left;color:var(--t3);font-weight:400;padding:5px 6px;border-bottom:1px solid var(--b);font-size:.5rem;letter-spacing:.04em}
+.tbl td{padding:5px 6px;border-bottom:1px solid var(--t4);color:var(--t2)}
+
+/* ── Badge ── */
+.badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--fm);font-size:.5rem;padding:3px 8px;border-radius:100px;border:1px solid var(--b);color:var(--t3)}
+
+/* ── About ── */
+.about{text-align:center;padding:30px 20px}
+.about h2{font-family:var(--fd);font-size:2rem;font-weight:300;margin-bottom:6px}
+.about h2 em{color:var(--a);font-style:italic}
+.about p{font-family:var(--fm);font-size:.58rem;color:var(--t2);margin-bottom:16px}
+.tags{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-bottom:20px}
+.about-links{margin-top:16px;font-family:var(--fm);font-size:.55rem;color:var(--t3)}
+.about-links a{color:var(--a);text-decoration:none;cursor:pointer}
+.about-links a:hover{text-decoration:underline}
+
+/* ── Animations ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeUp .4s ease forwards}
+</style>
+</head>
+<body>
+
+<div class="titlebar">
+  <h1>LyricFlow <em>Console</em></h1>
+  <div class="tb-btns">
+    <button onclick="minWin()" title="最小化">&#9472;</button>
+    <button onclick="maxWin()" title="最大化">&#9633;</button>
+    <button class="close" onclick="closeWin()" title="关闭">&#10005;</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="nav">
+    <button class="on" data-s="dash">仪表盘</button>
+    <button data-s="play">播放</button>
+    <button data-s="lyrics">歌词</button>
+    <button data-s="logs">日志</button>
+    <button data-s="about">关于</button>
+  </div>
+
+  <div class="sections">
+
+    <!-- ═══ 仪表盘 ═══ -->
+    <div class="section active" id="s-dash">
+      <div class="cards">
+        <div class="np-card fade-in">
+          <div class="np-title" id="np-title">等待播放...</div>
+          <div class="np-artist" id="np-artist"></div>
+          <div class="np-status">
+            <div class="np-dot off" id="np-dot"></div>
+            <span class="np-stxt" id="np-stxt">检测中</span>
+            <span style="flex:1"></span>
+            <span class="np-stxt" id="np-clients">0 客户端</span>
+          </div>
+          <div class="prog-wrap">
+            <div class="prog-bar" id="prog-bar">
+              <div class="prog-fill" id="prog-fill"></div>
+            </div>
+            <div class="prog-times">
+              <span id="prog-cur">0:00</span>
+              <span id="prog-total">0:00</span>
+            </div>
+          </div>
+          <div class="ctrl-row">
+            <button class="cbtn sm" onclick="sendKey('prev')" title="上一曲">⏮</button>
+            <button class="cbtn play" id="btn-play" onclick="sendKey('toggle')" title="播放/暂停">▶</button>
+            <button class="cbtn sm" onclick="sendKey('next')" title="下一曲">⏭</button>
+          </div>
+        </div>
+
+        <div class="card fade-in" style="animation-delay:.1s">
+          <h3><span class="i">⚙</span> 服务器</h3>
+          <div class="row"><span class="lbl">状态</span><span class="val" id="d-st">—</span></div>
+          <div class="row"><span class="lbl">运行时间</span><span class="val" id="d-up">—</span></div>
+          <div class="row"><span class="lbl">端口</span><span class="val" id="d-pt">—</span></div>
+          <div class="row"><span class="lbl">内存</span><span class="val" id="d-mm">—</span></div>
+          <div class="row"><span class="lbl">歌词缓存</span><span class="val" id="d-cc">—</span></div>
+          <div class="row"><span class="lbl">LRC 索引</span><span class="val" id="d-lc">—</span></div>
+        </div>
+
+        <div class="card fade-in" style="animation-delay:.15s">
+          <h3><span class="i">⚡</span> 快捷操作</h3>
+          <div class="acts">
+            <button class="act primary" onclick="openPage('/')">歌词页面</button>
+            <button class="act" onclick="openPage('/api/status')">状态 JSON</button>
+            <button class="act" onclick="clearCache()">清除缓存</button>
+            <button class="act danger" onclick="shutdown()">停止服务器</button>
+                      <button class="act" id="btn-ext" onclick="toggleExt()">外网: 关闭</button>
+          </div>
+                  <div class="card fade-in" style="animation-delay:.2s">
+          <h3><span class="i">🔗</span> 访问地址 <button class="act" style="margin-left:auto;padding:3px 10px;font-size:.5rem" onclick="copyAll()">全部复制</button></h3>
+          <div id="addr-list" style="display:flex;flex-direction:column;gap:4px"></div>
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ 播放 ═══ -->
+    <div class="section" id="s-play">
+      <div class="cards">
+        <div class="np-card">
+          <div class="np-title" id="np-title2">等待播放...</div>
+          <div class="np-artist" id="np-artist2"></div>
+          <div class="prog-wrap">
+            <div class="prog-bar"><div class="prog-fill" id="prog-fill2"></div></div>
+            <div class="prog-times">
+              <span id="prog-cur2">0:00</span>
+              <span id="prog-total2">0:00</span>
+            </div>
+          </div>
+          <div class="ctrl-row">
+            <button class="cbtn sm" onclick="sendKey('prev')">⏮</button>
+            <button class="cbtn play" id="btn-play2" onclick="sendKey('toggle')">▶</button>
+            <button class="cbtn sm" onclick="sendKey('next')">⏭</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3><span class="i">♫</span> 歌词</h3>
+          <div class="lyr-box" id="lyr-box">
+            <div style="text-align:center;color:var(--t3);font-size:.6rem;padding:20px">暂无歌词</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ 歌词 ═══ -->
+    <div class="section" id="s-lyrics">
+      <div class="cards">
+        <div class="card">
+          <h3><span class="i">📂</span> 当前歌词 <span class="badge" id="ly-src">—</span></h3>
+          <div class="lyr-box" id="lyr-list" style="max-height:400px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ 日志 ═══ -->
+    <div class="section" id="s-logs">
+      <div class="card" style="height:calc(100% - 10px)">
+        <h3><span class="i">📝</span> 实时日志 <button class="act" style="margin-left:auto;padding:3px 10px;font-size:.5rem" onclick="refreshLogs()">刷新</button></h3>
+        <div class="log-box" id="log-box"></div>
+      </div>
+    </div>
+
+    <!-- ═══ 关于 ═══ -->
+    <div class="section" id="s-about">
+      <div class="about">
+        <h2>LyricFlow <em>Console</em></h2>
+        <p>自动歌词同步 · 本地管理控制台</p>
+        <div class="tags">
+          <span class="badge">Electron GUI</span>
+          <span class="badge">LRCLIB + 网易云</span>
+          <span class="badge">SMTC 检测</span>
+          <span class="badge">Wake Lock</span>
+          <span class="badge">HTTPS 电量</span>
+          <span class="badge">LRC 索引</span>
+        </div>
+        <div class="about-links">
+          <p><a onclick="openPage('/')">歌词页面</a> · <a onclick="openPage('/admin')">管理后台</a></p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ═══ 外网开关 ═══ */
+var extOn = false;
+
+function refreshExt() {
+    fetch(BASE + '/api/ext')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            extOn = d.allowExternal;
+            updateExtBtn();
+        })
+        .catch(function() {});
+}
+
+function toggleExt() {
+    var newVal = extOn ? '0' : '1';
+    fetch(BASE + '/api/ext?val=' + newVal)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            extOn = d.allowExternal;
+            updateExtBtn();
+        })
+        .catch(function() {});
+}
+
+function updateExtBtn() {
+    var btn = document.getElementById('btn-ext');
+    if (!btn) return;
+    if (extOn) {
+        btn.textContent = '外网: 开启';
+        btn.style.borderColor = 'var(--g)';
+        btn.style.color = 'var(--g)';
+    } else {
+        btn.textContent = '外网: 关闭';
+        btn.style.borderColor = 'var(--b)';
+        btn.style.color = 'var(--t2)';
+    }
+}
+var ipc = require('electron').ipcRenderer;
+var nodeOs = require('os');
+var clipboard = require('electron').clipboard;
+
+/* ═══ 工具 ═══ */
+function el(id) { return document.getElementById(id); }
+function fmt(s) {
+    if (!isFinite(s) || s < 0) s = 0;
+    var m = Math.floor(s / 60), sc = Math.floor(s % 60);
+    return m + ':' + (sc < 10 ? '0' : '') + sc;
+}
+
+/* ═══ 窗口控制 ═══ */
+function minWin() { ipc.send('minimize'); }
+function maxWin() { ipc.send('maximize'); }
+function closeWin() { ipc.send('close'); }
+function openPage(p) { ipc.send('open-url', 'http://localhost:' + 3721 + p); }
+
+/* ═══ 发送按键 ═══ */
+function sendKey(key) {
+    fetch('http://localhost:3721/api/key?key=' + key).catch(function() {});
+}
+
+/* ═══ 操作 ═══ */
+function clearCache() {
+    if (!confirm('确定清除所有歌词缓存？')) return;
+    fetch('http://localhost:3721/api/clear-cache')
+        .then(function() { alert('缓存已清除'); })
+        .catch(function() { alert('操作失败'); });
+}
+
+function shutdown() {
+    if (!confirm('确定停止服务器？控制台将同时关闭。')) return;
+    ipc.send('shutdown');
+}
+
+/* ═══ 导航 ═══ */
+document.querySelectorAll('.nav button').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        document.querySelector('.nav .on').classList.remove('on');
+        btn.classList.add('on');
+        document.querySelector('.section.active').classList.remove('active');
+        el('s-' + btn.getAttribute('data-s')).classList.add('active');
+    });
+});
+
+/* ═══ 进度条点击跳转 ═══ */
+el('prog-bar').addEventListener('click', function(e) {
+    var rect = this.getBoundingClientRect();
+    var pct = (e.clientX - rect.left) / rect.width;
+    // 这里可以加 seek 功能，目前只是视觉交互
+});
+
+/* ═══ 数据刷新 ═══ */
+var BASE = 'http://localhost:3721';
+var lyricsCache = null;
+
+function refresh() {
+    if (!addrLoaded) { loadAddresses(); refreshExt(); }
+  fetch(BASE + '/api/status')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            // 状态
+            if (d.connected) {
+                el('np-dot').className = d.isPlaying ? 'np-dot playing' : 'np-dot paused';
+                el('np-stxt').textContent = d.isPlaying ? '播放中' : '已暂停';
+                el('d-st').innerHTML = '<span class="gn">已连接</span>';
+            } else {
+                el('np-dot').className = 'np-dot off';
+                el('np-stxt').textContent = '等待播放器';
+                el('d-st').innerHTML = '<span class="rd">未连接</span>';
+            }
+
+            // 曲目
+            var title = d.title || '等待播放...';
+            el('np-title').textContent = title;
+            el('np-artist').textContent = d.artist || '';
+            el('np-title2').textContent = title;
+            el('np-artist2').textContent = d.artist || '';
+
+            // 播放按钮
+            var icon = d.isPlaying ? '⏸' : '▶';
+            el('btn-play').textContent = icon;
+            el('btn-play2').textContent = icon;
+
+            // 进度
+            if (d.estDur > 0) {
+                var pct = Math.min(100, d.position / d.estDur * 100);
+                el('prog-fill').style.width = pct + '%';
+                el('prog-fill2').style.width = pct + '%';
+            } else {
+                el('prog-fill').style.width = '0%';
+                el('prog-fill2').style.width = '0%';
+            }
+            el('prog-cur').textContent = fmt(d.position);
+            el('prog-total').textContent = fmt(d.estDur);
+            el('prog-cur2').textContent = fmt(d.position);
+            el('prog-total2').textContent = fmt(d.estDur);
+
+            // 信息
+            el('np-clients').textContent = d.clients + ' 客户端';
+            el('d-up').textContent = fmtUptime(d.uptime);
+            el('d-pt').textContent = d.port;
+            el('d-mm').textContent = d.memMB + ' MB';
+            el('d-cc').textContent = d.cacheSize;
+            el('d-lc').textContent = d.lrcIndexSize;
+
+            // 歌词源
+            el('ly-src').textContent = d.lyricsSource || '—';
+
+            // 歌词数据：曲目变化或当前无歌词时持续拉取
+            var newKey = (d.artist || '') + '|' + (d.title || '');
+            var hasLyrics = d.lyricsCount > 0;
+            if (newKey !== lyricsCache) {
+                lyricsCache = newKey;
+                loadLyrics();
+            } else if (!hasLyrics) {
+                loadLyrics();
+            }
+        })
+        .catch(function() {
+            el('np-dot').className = 'np-dot off';
+            el('np-stxt').textContent = '服务器未响应';
+            el('d-st').innerHTML = '<span class="rd">断开</span>';
+        });
+}
+
+function loadLyrics() {
+    fetch(BASE + '/api/lyrics')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            var box = el('lyr-box');
+            var list = el('lyr-list');
+
+            if (!d || !d.lyrics || !d.lyrics.length) {
+                box.innerHTML = '<div style="text-align:center;color:var(--t3);font-size:.6rem;padding:20px">暂无歌词</div>';
+                list.innerHTML = '<div style="text-align:center;color:var(--t3);font-size:.6rem;padding:20px">暂无歌词</div>';
+                return;
+            }
+
+            var html = '';
+            d.lyrics.forEach(function(l, i) {
+                html += '<div class="ll" data-idx="' + i + '"><span class="lt">' + fmt(l.time) + '</span><span>' + escHtml(l.text) + '</span></div>';
+            });
+            box.innerHTML = html;
+            list.innerHTML = html;
+        })
+        .catch(function(e) {
+            console.log('Lyrics load error:', e);
+        });
+}
+
+function refreshLogs() {
+    fetch(BASE + '/api/logs')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            el('log-box').innerHTML = d.map(function(l) {
+                return '<div>' + escHtml(l) + '</div>';
+            }).join('');
+            el('log-box').scrollTop = el('log-box').scrollHeight;
+        })
+        .catch(function() {});
+}
+
+/* ═══ 地址加载与复制 ═══ */
+var clipboard = require('electron').clipboard;
+
+var addrLoaded = false;
+
+var addrList = [];
+var addrLoaded = false;
+
+function loadAddresses() {
+    if (addrLoaded) return;
+    addrLoaded = true;
+
+    var httpPort = 3721;
+    var httpsPort = httpPort + 1;
+    addrList = [];
+
+    addrList.push({ tag: '本机', url: 'http://localhost:' + httpPort });
+    addrList.push({ tag: '本机', url: 'http://127.0.0.1:' + httpPort });
+    addrList.push({ tag: 'HTTPS', url: 'https://localhost:' + httpsPort });
+
+    var ifaces = nodeOs.networkInterfaces();
+    Object.keys(ifaces).forEach(function(name) {
+        ifaces[name].forEach(function(iface) {
+            if (iface.internal) return;
+            if (iface.family === 'IPv4') {
+                addrList.push({ tag: name, url: 'http://' + iface.address + ':' + httpPort });
+                addrList.push({ tag: name + ' S', url: 'https://' + iface.address + ':' + httpsPort });
+            }
+            if (iface.family === 'IPv6') {
+                var addr = iface.address;
+                if (addr.indexOf('%') !== -1) {
+                    addr = addr.split('%')[0];
+                    addrList.push({ tag: name + ' v6', url: 'http://[' + addr + ']:' + httpPort });
+                } else {
+                    addrList.push({ tag: name + ' v6', url: 'http://[' + addr + ']:' + httpPort });
+                    addrList.push({ tag: name + ' v6s', url: 'https://[' + addr + ']:' + httpsPort });
+                }
+            }
+        });
+    });
+
+    renderAddresses();
+}
+
+function renderAddresses() {
+    var box = document.getElementById('addr-list');
+    if (!box) return;
+    box.innerHTML = '';
+
+    var seen = {};
+    addrList.forEach(function(a) {
+        if (seen[a.url]) return;
+        seen[a.url] = true;
+
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--bg);border:1px solid var(--b);border-radius:var(--Rs)';
+
+        var tag = document.createElement('span');
+        tag.textContent = a.tag;
+        tag.style.cssText = 'font-family:var(--fm);font-size:.46rem;padding:2px 6px;border-radius:100px;background:var(--s2);color:var(--t3);flex-shrink:0;min-width:36px;text-align:center;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis';
+        if (a.tag.indexOf('S') !== -1 || a.tag.indexOf('v6s') !== -1) tag.style.color = 'var(--g)';
+        if (a.tag.indexOf('v6') !== -1) tag.style.color = '#7ab';
+        row.appendChild(tag);
+
+        var urlSpan = document.createElement('span');
+        urlSpan.textContent = a.url;
+        urlSpan.style.cssText = 'font-family:var(--fm);font-size:.52rem;color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+        row.appendChild(urlSpan);
+
+        var openBtn = document.createElement('button');
+        openBtn.textContent = '打开';
+        openBtn.style.cssText = 'background:0;border:1px solid var(--b);color:var(--t3);font-family:var(--fm);font-size:.46rem;padding:3px 8px;border-radius:100px;cursor:pointer;transition:all .15s;flex-shrink:0';
+        openBtn.onmouseenter = function() { this.style.borderColor = 'var(--a)'; this.style.color = 'var(--a)'; };
+        openBtn.onmouseleave = function() { this.style.borderColor = 'var(--b)'; this.style.color = 'var(--t3)'; };
+        openBtn.onclick = function() { require('electron').shell.openExternal(a.url); };
+        row.appendChild(openBtn);
+
+        var copyBtn = document.createElement('button');
+        copyBtn.textContent = '复制';
+        copyBtn.style.cssText = 'background:var(--a);border:1px solid var(--a);color:var(--bg);font-family:var(--fm);font-size:.46rem;padding:3px 8px;border-radius:100px;cursor:pointer;transition:all .15s;flex-shrink:0';
+        copyBtn.onclick = function() {
+            clipboard.writeText(a.url);
+            this.textContent = 'OK';
+            this.style.background = 'var(--g)';
+            this.style.borderColor = 'var(--g)';
+            var btn = this;
+            setTimeout(function() {
+                btn.textContent = '复制';
+                btn.style.background = 'var(--a)';
+                btn.style.borderColor = 'var(--a)';
+            }, 1200);
+        };
+        row.appendChild(copyBtn);
+
+        box.appendChild(row);
+    });
+}
+
+function copyAll() {
+    var seen = {};
+    var urls = [];
+    addrList.forEach(function(a) {
+        if (!seen[a.url]) { seen[a.url] = true; urls.push(a.url); }
+    });
+    clipboard.writeText(urls.join('\n'));
+    var btn = document.querySelector('[onclick="copyAll()"]');
+    if (btn) {
+        var orig = btn.textContent;
+        btn.textContent = '已复制';
+        setTimeout(function() { btn.textContent = orig; }, 1200);
+    }
+}
+
+function addAddr(tag, url) {
+    addrList.push({ tag: tag, url: url });
+    renderAddresses();
+}
+
+
+
+function copyAll() {
+    var all = addrList.map(function(a) { return a.url; }).join('\n');
+    clipboard.writeText(all);
+    var btn = document.querySelector('[onclick="copyAll()"]');
+    if (btn) {
+        var orig = btn.textContent;
+        btn.textContent = '已复制';
+        setTimeout(function() { btn.textContent = orig; }, 1500);
+    }
+}
+
+function escHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function fmtUptime(s) {
+    if (s < 60) return s + '秒';
+    if (s < 3600) return Math.floor(s / 60) + '分' + (s % 60) + '秒';
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return h + '时' + m + '分';
+}
+
+/* ═══ 启动 ═══ */
+refresh();
+refreshLogs();
+setInterval(refresh, 1500);
+setInterval(refreshLogs, 5000);
+</script>
+</body>
+</html>
