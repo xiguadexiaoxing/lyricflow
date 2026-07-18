@@ -23,3 +23,5 @@ node server.js
 MUSIC_DIR="D:\Music" node server.js
 ```
 关闭外网访问后，ipv6和外网地址不可用
+
+想在Minecraft中显示？看看[这个项目](https://github.com/xiguadexiaoxing/lyricflow-mod/tree/main)
