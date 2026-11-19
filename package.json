@@ -1,12 +1,18 @@
 {
   "name": "lyricflow",
-  "version": "1.0.0",
-  "description": "LyricFlow",
+  "version": "1.1.0",
+  "description": "LyricFlow - synced lyrics for whatever your desktop player is playing",
   "main": "main.js",
   "author": "LyricFlow",
+  "license": "GPL-3.0",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "electron .",
     "server": "node server.js",
+    "test:smoke": "node tools/smoke-test.js",
+    "test:gui": "electron tools/electron-smoke.js",
     "dist": "electron-builder --win portable --x64"
   },
   "build": {
@@ -20,9 +26,8 @@
       "gui.html",
       "server.js",
       "index.html",
-      "admin.html",
-      "package.json",
-      "node_modules/**/*"
+      "vendor/**/*",
+      "package.json"
     ],
     "win": {
       "target": [
@@ -39,8 +44,8 @@
     }
   },
   "dependencies": {
-    "ws": "^8.0.0",
-    "node-forge": "^1.3.0"
+    "node-forge": "^1.3.0",
+    "ws": "^8.0.0"
   },
   "devDependencies": {
     "electron": "^35.0.0",

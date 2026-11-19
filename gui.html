@@ -67,7 +67,7 @@ body{background:var(--bg);color:var(--t);font-family:var(--fb);-webkit-font-smoo
 
 /* ── Progress ── */
 .prog-wrap{margin-top:12px}
-.prog-bar{height:3px;background:var(--s3);border-radius:2px;cursor:pointer;position:relative}
+.prog-bar{height:3px;background:var(--s3);border-radius:2px;position:relative}
 .prog-fill{height:100%;background:var(--a);border-radius:2px;transition:width .25s linear;position:relative}
 .prog-fill::after{content:'';position:absolute;right:-4px;top:-3px;width:9px;height:9px;background:var(--a);border-radius:50%;opacity:0;transition:opacity .2s}
 .prog-bar:hover .prog-fill::after{opacity:1}
@@ -121,6 +121,41 @@ body{background:var(--bg);color:var(--t);font-family:var(--fb);-webkit-font-smoo
 /* ── Animations ── */
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .fade-in{animation:fadeUp .4s ease forwards}
+/* ── 视觉刷新 ── */
+:root{--bg:#07070b;--s:rgba(18,18,26,.72);--s2:rgba(26,26,36,.8);--s3:rgba(34,34,46,.8);
+  --a:#ffb054;--ag:rgba(255,176,84,.25);--t:#f3f0ea;--t2:rgba(243,240,234,.55);--t3:rgba(243,240,234,.3);
+  --t4:rgba(243,240,234,.1);--b:rgba(255,255,255,.09);--R:20px;--Rs:14px}
+body{background:radial-gradient(900px 520px at 8% -10%,rgba(255,150,70,.12),transparent 60%),
+  radial-gradient(700px 420px at 96% 4%,rgba(110,120,255,.09),transparent 60%),#07070b}
+.titlebar{height:40px;background:rgba(0,0,0,.32);border-bottom:1px solid var(--b)}
+.titlebar h1{font-family:var(--fb);font-weight:600;letter-spacing:.02em;font-size:.84rem}
+.titlebar h1 em{background:linear-gradient(135deg,#ffd28a,#ff8a5c);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-style:normal}
+.tb-btns .lyrics-btn{width:auto!important;padding:0 12px!important;border-radius:999px!important;background:rgba(255,255,255,.05);color:var(--t2);font-family:var(--fb);font-size:.64rem}
+.tb-btns .lyrics-btn:hover{color:var(--a);background:rgba(255,176,84,.12)}
+.nav{padding:14px 16px 6px;gap:6px;overflow-x:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav button{background:rgba(255,255,255,.04);border:1px solid var(--b);padding:7px 16px;font-family:var(--fb);font-size:.68rem;border-radius:999px}
+.nav button.on{background:linear-gradient(135deg,var(--a),#ff7a59);color:#1a1206;border-color:transparent;box-shadow:0 6px 18px rgba(255,140,80,.32)}
+.card,.np-card{border-color:var(--b);box-shadow:0 14px 36px rgba(0,0,0,.35);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.card{background:linear-gradient(160deg,rgba(24,24,34,.82),rgba(13,13,19,.9))}
+.np-card{background:linear-gradient(140deg,rgba(255,176,84,.14),rgba(24,24,34,.9) 46%,rgba(13,13,19,.96))}
+.np-title{font-family:var(--fb);font-weight:600;font-size:1.3rem}
+.np-dot.playing{background:#6ee7a8;box-shadow:0 0 10px rgba(110,231,168,.5)}
+.cbtn{background:rgba(255,255,255,.05);border-color:var(--b)}
+.cbtn.play{background:linear-gradient(135deg,var(--a),#ff7a59);color:#1a1206;border:0;box-shadow:0 10px 28px rgba(255,140,80,.35)}
+.prog-bar{height:4px;background:rgba(255,255,255,.08);border-radius:999px}
+.prog-fill{background:linear-gradient(90deg,var(--a),#ff7a59);box-shadow:0 0 12px rgba(255,140,80,.45)}
+.act{border-radius:999px;background:rgba(255,255,255,.04);color:var(--t2);font-family:var(--fb);font-size:.62rem}
+.act.primary{background:linear-gradient(135deg,var(--a),#ff7a59);color:#1a1206}
+.act:hover{border-color:rgba(255,176,84,.5);color:var(--a)}
+.badge{border-radius:999px;background:rgba(255,255,255,.03);font-family:var(--fb)}
+.log-box{background:rgba(0,0,0,.35);border-radius:14px;border-color:var(--b)}
+.tbl th{font-family:var(--fb)}
+.about h2 em{background:linear-gradient(135deg,#ffd28a,#ff8a5c);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-style:normal}
+body.embed .titlebar{display:none}
+body.embed .main{height:100vh}
+body.embed .nav{padding-top:14px}
+body.embed .sections{padding-bottom:76px}
 </style>
 </head>
 <body>
@@ -128,9 +163,10 @@ body{background:var(--bg);color:var(--t);font-family:var(--fb);-webkit-font-smoo
 <div class="titlebar">
   <h1>LyricFlow <em>Console</em></h1>
   <div class="tb-btns">
-    <button onclick="minWin()" title="最小化">&#9472;</button>
-    <button onclick="maxWin()" title="最大化">&#9633;</button>
-    <button class="close" onclick="closeWin()" title="关闭">&#10005;</button>
+    <button class="lyrics-btn" onclick="goLyrics()" title="切换到歌词页面">歌词页</button>
+    <button class="win-btn" onclick="minWin()" title="最小化">&#9472;</button>
+    <button class="win-btn" onclick="maxWin()" title="最大化">&#9633;</button>
+    <button class="win-btn close" onclick="closeWin()" title="关闭">&#10005;</button>
   </div>
 </div>
 
@@ -138,7 +174,7 @@ body{background:var(--bg);color:var(--t);font-family:var(--fb);-webkit-font-smoo
   <div class="nav">
     <button class="on" data-s="dash">仪表盘</button>
     <button data-s="play">播放</button>
-    <button data-s="lyrics">歌词</button>
+    <button data-s="lyrics">歌词预览</button>
     <button data-s="logs">日志</button>
     <button data-s="about">关于</button>
   </div>
@@ -190,12 +226,13 @@ body{background:var(--bg);color:var(--t);font-family:var(--fb);-webkit-font-smoo
             <button class="act" onclick="openPage('/api/status')">状态 JSON</button>
             <button class="act" onclick="clearCache()">清除缓存</button>
             <button class="act danger" onclick="shutdown()">停止服务器</button>
-                      <button class="act" id="btn-ext" onclick="toggleExt()">外网: 关闭</button>
+            <button class="act" id="btn-ext" onclick="toggleExt()">外网: 关闭</button>
           </div>
-                  <div class="card fade-in" style="animation-delay:.2s">
+        </div>
+
+        <div class="card fade-in" style="animation-delay:.2s">
           <h3><span class="i">🔗</span> 访问地址 <button class="act" style="margin-left:auto;padding:3px 10px;font-size:.5rem" onclick="copyAll()">全部复制</button></h3>
           <div id="addr-list" style="display:flex;flex-direction:column;gap:4px"></div>
-        </div>
         </div>
       </div>
     </div>
@@ -260,7 +297,7 @@ body{background:var(--bg);color:var(--t);font-family:var(--fb);-webkit-font-smoo
           <span class="badge">LRC 索引</span>
         </div>
         <div class="about-links">
-          <p><a onclick="openPage('/')">歌词页面</a> · <a onclick="openPage('/admin')">管理后台</a></p>
+          <p><a onclick="openPage('/')">歌词页面</a> · <a onclick="openPage('/api/status')">状态 JSON</a></p>
         </div>
       </div>
     </div>
@@ -269,6 +306,44 @@ body{background:var(--bg);color:var(--t);font-family:var(--fb);-webkit-font-smoo
 </div>
 
 <script>
+/* ═══ 端口 / 运行环境（Electron 或普通浏览器） ═══ */
+var PORT = (function () {
+    try {
+        var value = Number(new URLSearchParams(location.search).get('port'));
+        return value > 0 ? value : 3721;
+    } catch (e) { return 3721; }
+})();
+
+var WEB_MODE = location.protocol === 'http:' || location.protocol === 'https:';
+var BASE = WEB_MODE ? location.origin : 'http://127.0.0.1:' + PORT;
+
+var ELECTRON = false;
+var ipc = null;
+var electronClipboard = null;
+var electronShell = null;
+try {
+    if (typeof require === 'function') {
+        var electron = require('electron');
+        if (electron && electron.ipcRenderer && electron.clipboard) {
+            ELECTRON = true;
+            ipc = electron.ipcRenderer;
+            electronClipboard = electron.clipboard;
+            electronShell = electron.shell;
+        }
+    }
+} catch (e) { ELECTRON = false; }
+
+var EMBED = false;
+try { EMBED = new URLSearchParams(location.search).get('embed') === '1'; } catch (e) { EMBED = false; }
+if (EMBED) {
+    document.body.classList.add('embed');
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            try { window.parent.postMessage({ type: 'lf-close-console' }, location.origin); } catch (e) {}
+        }
+    });
+}
+
 /* ═══ 外网开关 ═══ */
 var extOn = false;
 
@@ -306,9 +381,6 @@ function updateExtBtn() {
         btn.style.color = 'var(--t2)';
     }
 }
-var ipc = require('electron').ipcRenderer;
-var nodeOs = require('os');
-var clipboard = require('electron').clipboard;
 
 /* ═══ 工具 ═══ */
 function el(id) { return document.getElementById(id); }
@@ -318,28 +390,76 @@ function fmt(s) {
     return m + ':' + (sc < 10 ? '0' : '') + sc;
 }
 
-/* ═══ 窗口控制 ═══ */
-function minWin() { ipc.send('minimize'); }
-function maxWin() { ipc.send('maximize'); }
-function closeWin() { ipc.send('close'); }
-function openPage(p) { ipc.send('open-url', 'http://localhost:' + 3721 + p); }
+function copyText(text) {
+    if (electronClipboard) { electronClipboard.writeText(text); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(function() {});
+        return;
+    }
+    var area = document.createElement('textarea');
+    area.value = text;
+    document.body.appendChild(area);
+    area.select();
+    try { document.execCommand('copy'); } catch (e) { /* ignore */ }
+    document.body.removeChild(area);
+}
+
+function openUrl(url) {
+    if (electronShell) electronShell.openExternal(url);
+    else window.open(url, '_blank', 'noopener');
+}
+
+/* ═══ 窗口控制（浏览器里隐藏标题栏按钮） ═══ */
+function minWin() { if (ipc) ipc.send('minimize'); }
+function maxWin() { if (ipc) ipc.send('maximize'); }
+function closeWin() {
+    if (ipc) { ipc.send('close'); return; }
+    window.close();
+}
+function openPage(p) {
+    if (p === '/') { goLyrics(); return; }
+    var url = BASE + p;
+    if (electronShell) { electronShell.openExternal(url); return; }
+    window.open(url, '_blank', 'noopener');
+}
+
+/* 从控制台回到歌词页；嵌入模式下通知父页面切换视图 */
+function goLyrics() {
+    if (EMBED && window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'lf-close-console' }, location.origin);
+        return;
+    }
+    if (electronShell) { electronShell.openExternal(BASE + '/'); return; }
+    location.href = '/';
+}
+
+if (!ELECTRON) {
+    document.querySelectorAll('.tb-btns .win-btn').forEach(function (btn) { btn.style.display = 'none'; });
+}
 
 /* ═══ 发送按键 ═══ */
 function sendKey(key) {
-    fetch('http://localhost:3721/api/key?key=' + key).catch(function() {});
+    fetch(BASE + '/api/key?key=' + encodeURIComponent(key)).catch(function() {});
 }
 
 /* ═══ 操作 ═══ */
 function clearCache() {
     if (!confirm('确定清除所有歌词缓存？')) return;
-    fetch('http://localhost:3721/api/clear-cache')
-        .then(function() { alert('缓存已清除'); })
-        .catch(function() { alert('操作失败'); });
+    fetch(BASE + '/api/clear-cache')
+        .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            alert('缓存已清除');
+        })
+        .catch(function() { alert('操作失败（本机控制台才有权限）'); });
 }
 
 function shutdown() {
-    if (!confirm('确定停止服务器？控制台将同时关闭。')) return;
-    ipc.send('shutdown');
+    if (!confirm('确定停止服务器？')) return;
+    if (ipc) { ipc.send('shutdown'); return; }
+    fetch(BASE + '/api/shutdown').catch(function() {});
+    setTimeout(function() {
+        document.body.innerHTML = '<div style="padding:40px;color:#999;font-family:sans-serif">服务器已停止，可以关闭此页面。</div>';
+    }, 800);
 }
 
 /* ═══ 导航 ═══ */
@@ -352,22 +472,15 @@ document.querySelectorAll('.nav button').forEach(function(btn) {
     });
 });
 
-/* ═══ 进度条点击跳转 ═══ */
-el('prog-bar').addEventListener('click', function(e) {
-    var rect = this.getBoundingClientRect();
-    var pct = (e.clientX - rect.left) / rect.width;
-    // 这里可以加 seek 功能，目前只是视觉交互
-});
-
 /* ═══ 数据刷新 ═══ */
-var BASE = 'http://localhost:3721';
 var lyricsCache = null;
 
 function refresh() {
-    if (!addrLoaded) { loadAddresses(); refreshExt(); }
   fetch(BASE + '/api/status')
         .then(function(r) { return r.json(); })
         .then(function(d) {
+            if (!addrLoaded) { loadAddresses(d.addresses); refreshExt(); }
+
             // 状态
             if (d.connected) {
                 el('np-dot').className = d.isPlaying ? 'np-dot playing' : 'np-dot paused';
@@ -392,8 +505,9 @@ function refresh() {
             el('btn-play2').textContent = icon;
 
             // 进度
-            if (d.estDur > 0) {
-                var pct = Math.min(100, d.position / d.estDur * 100);
+            var total = d.duration || d.estDur || 0;
+            if (total > 0) {
+                var pct = Math.min(100, Math.max(0, d.position / total * 100));
                 el('prog-fill').style.width = pct + '%';
                 el('prog-fill2').style.width = pct + '%';
             } else {
@@ -401,9 +515,9 @@ function refresh() {
                 el('prog-fill2').style.width = '0%';
             }
             el('prog-cur').textContent = fmt(d.position);
-            el('prog-total').textContent = fmt(d.estDur);
+            el('prog-total').textContent = fmt(total);
             el('prog-cur2').textContent = fmt(d.position);
-            el('prog-total2').textContent = fmt(d.estDur);
+            el('prog-total2').textContent = fmt(total);
 
             // 信息
             el('np-clients').textContent = d.clients + ' 客户端';
@@ -471,46 +585,13 @@ function refreshLogs() {
 }
 
 /* ═══ 地址加载与复制 ═══ */
-var clipboard = require('electron').clipboard;
-
 var addrLoaded = false;
-
 var addrList = [];
-var addrLoaded = false;
 
-function loadAddresses() {
-    if (addrLoaded) return;
+function loadAddresses(list) {
+    if (addrLoaded || !list || !list.length) return;
     addrLoaded = true;
-
-    var httpPort = 3721;
-    var httpsPort = httpPort + 1;
-    addrList = [];
-
-    addrList.push({ tag: '本机', url: 'http://localhost:' + httpPort });
-    addrList.push({ tag: '本机', url: 'http://127.0.0.1:' + httpPort });
-    addrList.push({ tag: 'HTTPS', url: 'https://localhost:' + httpsPort });
-
-    var ifaces = nodeOs.networkInterfaces();
-    Object.keys(ifaces).forEach(function(name) {
-        ifaces[name].forEach(function(iface) {
-            if (iface.internal) return;
-            if (iface.family === 'IPv4') {
-                addrList.push({ tag: name, url: 'http://' + iface.address + ':' + httpPort });
-                addrList.push({ tag: name + ' S', url: 'https://' + iface.address + ':' + httpsPort });
-            }
-            if (iface.family === 'IPv6') {
-                var addr = iface.address;
-                if (addr.indexOf('%') !== -1) {
-                    addr = addr.split('%')[0];
-                    addrList.push({ tag: name + ' v6', url: 'http://[' + addr + ']:' + httpPort });
-                } else {
-                    addrList.push({ tag: name + ' v6', url: 'http://[' + addr + ']:' + httpPort });
-                    addrList.push({ tag: name + ' v6s', url: 'https://[' + addr + ']:' + httpsPort });
-                }
-            }
-        });
-    });
-
+    addrList = list;
     renderAddresses();
 }
 
@@ -544,14 +625,14 @@ function renderAddresses() {
         openBtn.style.cssText = 'background:0;border:1px solid var(--b);color:var(--t3);font-family:var(--fm);font-size:.46rem;padding:3px 8px;border-radius:100px;cursor:pointer;transition:all .15s;flex-shrink:0';
         openBtn.onmouseenter = function() { this.style.borderColor = 'var(--a)'; this.style.color = 'var(--a)'; };
         openBtn.onmouseleave = function() { this.style.borderColor = 'var(--b)'; this.style.color = 'var(--t3)'; };
-        openBtn.onclick = function() { require('electron').shell.openExternal(a.url); };
+        openBtn.onclick = function() { openUrl(a.url); };
         row.appendChild(openBtn);
 
         var copyBtn = document.createElement('button');
         copyBtn.textContent = '复制';
         copyBtn.style.cssText = 'background:var(--a);border:1px solid var(--a);color:var(--bg);font-family:var(--fm);font-size:.46rem;padding:3px 8px;border-radius:100px;cursor:pointer;transition:all .15s;flex-shrink:0';
         copyBtn.onclick = function() {
-            clipboard.writeText(a.url);
+            copyText(a.url);
             this.textContent = 'OK';
             this.style.background = 'var(--g)';
             this.style.borderColor = 'var(--g)';
@@ -574,25 +655,7 @@ function copyAll() {
     addrList.forEach(function(a) {
         if (!seen[a.url]) { seen[a.url] = true; urls.push(a.url); }
     });
-    clipboard.writeText(urls.join('\n'));
-    var btn = document.querySelector('[onclick="copyAll()"]');
-    if (btn) {
-        var orig = btn.textContent;
-        btn.textContent = '已复制';
-        setTimeout(function() { btn.textContent = orig; }, 1200);
-    }
-}
-
-function addAddr(tag, url) {
-    addrList.push({ tag: tag, url: url });
-    renderAddresses();
-}
-
-
-
-function copyAll() {
-    var all = addrList.map(function(a) { return a.url; }).join('\n');
-    clipboard.writeText(all);
+    copyText(urls.join('\n'));
     var btn = document.querySelector('[onclick="copyAll()"]');
     if (btn) {
         var orig = btn.textContent;
@@ -602,7 +665,7 @@ function copyAll() {
 }
 
 function escHtml(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function fmtUptime(s) {
@@ -615,8 +678,12 @@ function fmtUptime(s) {
 /* ═══ 启动 ═══ */
 refresh();
 refreshLogs();
-setInterval(refresh, 1500);
-setInterval(refreshLogs, 5000);
+setInterval(function() {
+    if (document.visibilityState === 'visible') refresh();
+}, 2000);
+setInterval(function() {
+    if (document.visibilityState === 'visible') refreshLogs();
+}, 6000);
 </script>
 </body>
 </html>

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>LyricFlow</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9835;</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -160,20 +161,171 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
   #logpanel{width:90vw;right:5vw}
 }
 </style>
+<style>
+/* ═══ 视觉刷新：玻璃质感 / 渐变强调 / 更现代的排版 ═══ */
+:root{
+  --bg:#07070b;--s:rgba(20,20,28,.72);
+  --a:#ffb054;--a2:#ff7a59;
+  --at:rgba(255,176,84,.12);--ag:rgba(255,176,84,.45);
+  --t:#f3f0ea;--t2:rgba(243,240,234,.58);--t3:rgba(243,240,234,.3);--t4:rgba(243,240,234,.12);
+  --b:rgba(255,255,255,.09);--r:22px;--rs:14px;
+}
+html,body{background:var(--bg)}
+body{font-family:var(--fb)}
+#bg{background:
+  radial-gradient(1100px 560px at 12% -8%,rgba(255,150,70,.13),transparent 60%),
+  radial-gradient(900px 500px at 92% 8%,rgba(110,120,255,.10),transparent 62%),
+  radial-gradient(800px 620px at 50% 112%,rgba(255,105,120,.09),transparent 60%),
+  #07070b}
+#bg::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,transparent 38%,rgba(0,0,0,.5) 100%);pointer-events:none}
+.orb{filter:blur(150px);opacity:.5}
+
+/* 顶栏 */
+#topbar{top:14px;left:14px;right:14px;padding:10px 14px;border-radius:20px;border:1px solid var(--b);
+  background:rgba(12,12,18,.72);box-shadow:0 18px 50px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter:blur(28px) saturate(1.5);-webkit-backdrop-filter:blur(28px) saturate(1.5);gap:14px}
+#topbar.hide{transform:translateY(-150%)}
+.brand{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.logo{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;font-size:1.1rem;color:#1a1206;
+  background:linear-gradient(135deg,#ffd28a,#ff8a5c);box-shadow:0 8px 24px rgba(255,150,80,.35);flex-shrink:0}
+.meta h1{font-family:var(--fb);font-size:1.02rem;font-weight:600;letter-spacing:.01em}
+.meta p{font-family:var(--fm);font-size:.66rem;letter-spacing:.04em;margin-top:3px}
+.dot{width:8px;height:8px;box-shadow:0 0 12px rgba(255,90,90,.5)}
+.dot.on{background:#6ee7a8;box-shadow:0 0 12px rgba(110,231,168,.6)}
+.actions{gap:6px}
+.actions button{border-radius:999px;padding:8px 13px;font-family:var(--fb);font-size:.72rem;
+  background:rgba(255,255,255,.04);border:1px solid var(--b);color:var(--t2)}
+.actions button:hover{background:var(--at);border-color:rgba(255,176,84,.5);color:var(--a);transform:translateY(-1px)}
+.actions button.icon{width:36px;height:36px;padding:0;display:grid;place-items:center;font-size:.95rem}
+
+/* 视图切换 */
+.seg{display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--b);flex-shrink:0}
+.seg button{border:0;background:transparent;color:var(--t2);font-family:var(--fb);font-size:.78rem;padding:8px 18px;
+  border-radius:999px;cursor:pointer;transition:all .25s;white-space:nowrap}
+.seg button:hover{color:var(--t)}
+.seg button.on{background:linear-gradient(135deg,var(--a),var(--a2));color:#1a1206;font-weight:600;box-shadow:0 6px 18px rgba(255,140,80,.35)}
+
+/* 底部控制 */
+#controls{bottom:14px;left:14px;right:14px;padding:12px 20px 14px;border-radius:22px;border:1px solid var(--b);
+  background:rgba(12,12,18,.72);box-shadow:0 18px 50px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter:blur(28px) saturate(1.5);-webkit-backdrop-filter:blur(28px) saturate(1.5)}
+#controls.hide{transform:translateY(150%)}
+#prog{padding:2px 0 10px}
+#ptrack{height:4px;background:rgba(255,255,255,.08);border-radius:999px;position:relative}
+#pfill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--a),var(--a2));
+  box-shadow:0 0 14px rgba(255,140,80,.55);position:relative}
+#pfill::after{content:'';position:absolute;right:-4px;top:50%;width:10px;height:10px;border-radius:50%;background:#fff;
+  transform:translateY(-50%);box-shadow:0 0 0 3px rgba(255,140,80,.18),0 0 16px rgba(255,160,90,.8);opacity:0;transition:opacity .2s}
+#controls:hover #pfill::after{opacity:1}
+.crow{gap:18px}
+.ctime{font-size:.72rem;color:var(--t2)}
+.cbtns button{width:38px;height:38px;background:rgba(255,255,255,.04);border:1px solid var(--b)}
+.cbtns button:hover{background:rgba(255,255,255,.09);color:var(--t);transform:translateY(-1px) scale(1.04)}
+#bplay{width:50px!important;height:50px!important;background:linear-gradient(135deg,var(--a),var(--a2))!important;
+  color:#1a1206!important;border:0!important;box-shadow:0 10px 30px rgba(255,140,80,.4)!important;font-size:1.05rem!important}
+.coff button{border-radius:999px;padding:5px 12px;background:rgba(255,255,255,.03)}
+.coff button:hover{background:var(--at)}
+.coff .reset{display:inline-flex;align-items:center;gap:4px;color:var(--a);border-color:rgba(255,176,84,.35);background:rgba(255,176,84,.08)}
+.coff .reset:hover{color:var(--a);border-color:var(--a);background:rgba(255,176,84,.18)}
+.coff .reset:active{transform:scale(.95)}
+#oval{min-width:84px;color:var(--t2)}
+
+/* 歌词 */
+.ll{padding:12px 56px;font-size:1.34rem;line-height:1.65;color:rgba(243,240,234,.9);max-width:900px;border-radius:14px}
+.ll:hover{background:rgba(255,255,255,.035)}
+.ll.on{font-size:1.85rem;font-weight:600;background:linear-gradient(100deg,#ffd38d,#ff9f68 55%,#ffbf7a);
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 26px rgba(255,160,90,.35));text-shadow:none}
+#empty .ico{font-size:64px;background:linear-gradient(135deg,#ffd28a,#ff8a5c);-webkit-background-clip:text;
+  background-clip:text;-webkit-text-fill-color:transparent;opacity:.9}
+#empty h2{font-family:var(--fb);font-weight:600;font-size:1.3rem}
+.ebtns button{border-radius:999px;padding:11px 22px;background:rgba(255,255,255,.04)}
+.ebtns .pri{background:linear-gradient(135deg,var(--a),var(--a2));color:#1a1206;border:0;box-shadow:0 10px 28px rgba(255,140,80,.3)}
+
+/* 弹窗 / 日志 */
+.modal{background:rgba(4,4,8,.68);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.mbox{background:rgba(16,16,24,.94);border:1px solid var(--b);border-radius:26px;padding:30px 34px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.mbox input[type=text],.mbox textarea{background:rgba(255,255,255,.04);border-radius:14px}
+.mbtn{border-radius:999px;background:linear-gradient(135deg,var(--a),var(--a2));color:#1a1206;font-family:var(--fb);font-weight:600}
+.sr{border-radius:16px;background:rgba(255,255,255,.02)}
+.sr:hover{background:rgba(255,176,84,.08)}
+#logbtn{bottom:132px;border-radius:999px;background:rgba(12,12,18,.8)}
+#logpanel{bottom:132px;border-radius:20px;background:rgba(12,12,18,.92);border:1px solid var(--b);box-shadow:0 20px 60px rgba(0,0,0,.6)}
+
+/* 控制台视图（同页切换） */
+.console-view{position:fixed;inset:0;z-index:200;background:#07070b;opacity:0;visibility:hidden;
+  transition:opacity .3s ease,visibility .3s;transform:scale(.995)}
+.console-view.open{opacity:1;visibility:visible;transform:none}
+.console-view iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#07070b;opacity:0;transition:opacity .35s}
+.console-view iframe.ready{opacity:1}
+.console-loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--t3);font-family:var(--fm);font-size:.78rem;letter-spacing:.14em}
+.console-loading.hide{display:none}
+.console-fab{position:fixed;bottom:18px;right:18px;z-index:201;display:flex;gap:8px;padding:6px;border-radius:999px;
+  background:rgba(12,12,18,.72);border:1px solid var(--b);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.pill{border-radius:999px;border:1px solid var(--b);background:rgba(255,255,255,.05);color:var(--t2);
+  padding:9px 16px;font-size:.72rem;cursor:pointer;text-decoration:none;font-family:var(--fb);transition:all .2s}
+.pill:hover{color:var(--t);border-color:rgba(255,176,84,.5)}
+.pill.accent{background:linear-gradient(135deg,var(--a),var(--a2));color:#1a1206;border:0;font-weight:600}
+
+/* 轻提示 */
+.toast{position:fixed;left:50%;bottom:130px;transform:translate(-50%,12px);z-index:80;display:flex;align-items:center;gap:10px;
+  padding:10px 12px 10px 16px;border-radius:999px;background:rgba(12,12,18,.94);border:1px solid var(--b);
+  box-shadow:0 18px 50px rgba(0,0,0,.5);color:var(--t2);font-size:.76rem;opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast button{border:0;border-radius:999px;padding:7px 14px;background:linear-gradient(135deg,var(--a),var(--a2));color:#1a1206;
+  font-family:var(--fb);font-size:.72rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.toast button:hover{filter:brightness(1.08)}
+.toast span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 纯黑模式 & 响应式 */
+.dark{--bg:#000;--t:#cfcfcf;--t2:rgba(207,207,207,.55);--t3:rgba(207,207,207,.3);--t4:rgba(207,207,207,.12);--b:rgba(255,255,255,.06)}
+.dark #topbar,.dark #controls{background:rgba(0,0,0,.94)}
+.dark .ll.on{background:none;-webkit-text-fill-color:#e0b040;color:#e0b040;filter:none}
+@media(max-width:760px){
+  #topbar{top:8px;left:8px;right:8px;padding:8px 10px;gap:8px;flex-wrap:wrap;border-radius:18px}
+  .brand{flex:1 1 auto;min-width:0}
+  .logo{width:34px;height:34px;border-radius:12px}
+  .meta h1{font-size:.92rem}
+  .seg{order:2;margin-left:auto}
+  .seg button{padding:7px 14px;font-size:.72rem}
+  .actions{order:3;width:100%;justify-content:flex-start;overflow-x:auto;padding-bottom:2px}
+  .actions button{padding:7px 10px;font-size:.64rem}
+  .actions button.icon{width:32px;height:32px}
+  #controls{bottom:8px;left:8px;right:8px;padding:10px 14px 12px;border-radius:18px}
+  .crow{flex-wrap:wrap;gap:10px}
+  .coff{margin-left:0;width:100%;justify-content:center;flex-wrap:wrap;row-gap:6px}
+  #logbtn,#logpanel{bottom:170px}
+  .ll{padding:9px 26px;font-size:1.08rem}
+  .ll.on{font-size:1.42rem}
+  .console-fab{top:auto;bottom:10px;right:10px;padding:4px}
+  .toast{bottom:190px;padding:9px 10px 9px 14px}
+  .pill{padding:8px 12px;font-size:.66rem}
+}
+</style>
 </head>
 <body>
 <div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 <div id="app">
 <header id="topbar">
-  <div class="meta">
-    <h1><span class="dot" id="dot"></span><span id="t-title">LyricFlow</span></h1>
-    <p id="t-artist">连接中...</p>
+  <div class="brand">
+    <span class="logo" aria-hidden="true">&#9835;</span>
+    <div class="meta">
+      <h1><span class="dot" id="dot"></span><span id="t-title">LyricFlow</span></h1>
+      <p id="t-artist">连接中...</p>
+    </div>
   </div>
+  <nav class="seg" id="viewSwitch" aria-label="视图切换">
+    <button type="button" data-view="lyrics" class="on">歌词</button>
+    <button type="button" data-view="console">控制台</button>
+  </nav>
   <span id="bat" style="display:none"></span>
   <div class="actions">
-    <button onclick="toggleFs()">全屏</button>
-    <button id="btn-dk" onclick="toggleDark()" title="纯黑模式" style="opacity:.5">纯黑</button>
-    <button id="btn-t2s" onclick="toggleT2S()" title="简繁切换" style="opacity:.5">简/繁</button>
+    <button class="icon" onclick="toggleFs()" title="全屏" aria-label="全屏">&#9974;</button>
+    <button class="icon" id="btn-dk" onclick="toggleDark()" title="纯黑模式" aria-label="纯黑模式">&#9680;</button>
+    <button class="icon" id="btn-t2s" onclick="toggleT2S()" title="简繁切换" aria-label="简繁切换">字</button>
+    <button class="icon" id="btn-cal" onclick="toggleCalibrate()" title="校准模式：点歌词行对齐" aria-label="校准模式">&#9678;</button>
     <button onclick="openModal('search')">搜索</button>
     <button onclick="openModal('paste')">粘贴</button>
     <button onclick="document.getElementById('flrc').click()">.lrc</button>
@@ -186,7 +338,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
     <h2>等待播放器播放歌曲</h2>
     <p>支持网易云音乐 / QQ音乐 / Spotify / foobar2000 等</p>
     <p style="font-size:.72rem;color:var(--t4);margin-top:6px">歌词自动从 LRCLIB + 网易云音乐获取</p>
-    <p style="font-size:.72rem;color:var(--t4)">点击歌词行可快速同步位置</p>
+    <p style="font-size:.72rem;color:var(--t4)">双击歌词行可直接校准；触屏可开启「◎」校准模式后点一行</p>
     <div class="ebtns">
       <button class="pri" onclick="openModal('search')">搜索歌词</button>
       <button onclick="openModal('paste')">粘贴歌词</button>
@@ -210,13 +362,28 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
       <span id="oval">偏移: 0.0s</span>
       <button onclick="offAdd(0.5)">+0.5</button>
       <button onclick="offAdd(5)">+5s</button>
+      <button class="reset" onclick="resetLyricsPosition()" title="复原歌词位置：偏移归零并回到当前行">&#8634; 复原</button>
     </div>
   </div>
 </footer>
 </div>
 
+<div id="consoleView" class="console-view" aria-hidden="true">
+  <iframe id="consoleFrame" title="LyricFlow 控制台"></iframe>
+  <div class="console-loading" id="consoleLoading">正在载入控制台…</div>
+  <div class="console-fab">
+    <a class="pill" href="/gui" target="_blank" rel="noopener">独立打开</a>
+    <button type="button" class="pill accent" onclick="setView('lyrics')">返回歌词</button>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite">
+  <span id="toastText"></span>
+  <button id="toastAction" type="button" hidden></button>
+</div>
+
 <div class="modal" id="m-search"><div class="mbox">
-  <button class="mclose" onclick="closeModal('search')">&times;</button>
+  <button class="mclose" onclick="closeModal('search')" aria-label="关闭">&times;</button>
   <h2>搜索歌词</h2>
   <p style="font-size:.75rem;color:var(--t3);margin-bottom:14px">从 LRCLIB + 网易云音乐搜索同步歌词</p>
   <div class="srow"><input type="text" id="s-track" placeholder="歌曲名称"><input type="text" id="s-artist" placeholder="艺术家（可选）"><button class="mbtn" onclick="doSearch()">搜索</button></div>
@@ -224,7 +391,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 </div></div>
 
 <div class="modal" id="m-paste"><div class="mbox">
-  <button class="mclose" onclick="closeModal('paste')">&times;</button>
+  <button class="mclose" onclick="closeModal('paste')" aria-label="关闭">&times;</button>
   <h2>粘贴歌词</h2>
   <p style="font-size:.75rem;color:var(--t3);margin-bottom:14px">粘贴 LRC 格式的同步歌词</p>
   <textarea id="p-txt" placeholder="[00:12.00]第一行歌词&#10;[00:17.50]第二行歌词"></textarea>
@@ -233,219 +400,685 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 
 <input type="file" id="flrc" hidden accept=".lrc,.txt">
 <button id="logbtn" onclick="toggleLog()">Log</button>
-<div id="logpanel"><div id="loghead"><h3>Debug Log</h3><button onclick="toggleLog()">&times;</button></div><div id="logbody"></div></div>
+<div id="logpanel"><div id="loghead"><h3>Debug Log</h3><button onclick="toggleLog()" aria-label="关闭">&times;</button></div><div id="logbody"></div></div>
 
+<script src="/vendor/opencc-t2cn.js"></script>
 <script>
-function el(id){return document.getElementById(id)}
-function fmt(s){if(!isFinite(s)||s<0)s=0;var m=Math.floor(s/60),sc=Math.floor(s%60);return m+':'+(sc<10?'0':'')+sc}
-function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+'use strict';
 
-var S={lyrics:[],idx:-1,offset:0,userScroll:false,autoScrolling:false,scrollY:0,position:0,duration:0,estDur:0,isPlaying:false};
-var ws=null;
+function el(id) { return document.getElementById(id); }
+function fmt(s) { if (!isFinite(s) || s < 0) s = 0; var m = Math.floor(s / 60), sc = Math.floor(s % 60); return m + ':' + (sc < 10 ? '0' : '') + sc; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
-var _t2s=null;
+var S = {
+  lyrics: [], origL: null, simpL: null, useSimp: false,
+  idx: -1, offset: 0, position: 0, duration: 0,
+  isPlaying: false, userScroll: false, autoScrolling: false,
+  lineEls: [], source: ''
+};
 
-/* ═══ 简繁转换 ═══ */
-try{if(typeof OpenCC!=='undefined')_t2s=OpenCC.Converter({from:'tw',to:'cn'})}catch(e){}
-if(!_t2s)try{if(typeof OpenCC!=='undefined')_t2s=OpenCC.Converter({from:'t',to:'s'})}catch(e){}
-if(_t2s){var _b=el('btn-t2s');if(_b)_b.style.opacity='.5'}
+var listBody = el('body');
+var logBody = el('logbody');
+var logOpen = false;
+var pendingLogs = [];
 
-function toggleT2S(){if(!_t2s)return;S.useSimp=!S.useSimp;var b=el('btn-t2s');b.style.opacity=S.useSimp?'1':'.5';b.style.borderColor=S.useSimp?'var(--a)':'';b.style.color=S.useSimp?'var(--a)':'';var r=S.useSimp?S.simpL:S.origL;if(r)renderLyrics(r,S.lyricsSource||'')}
+/* ═══ 简繁转换（OpenCC 可选加载） ═══ */
+var _t2s = null;
+try { if (typeof OpenCC !== 'undefined') _t2s = OpenCC.Converter({ from: 'tw', to: 'cn' }); } catch (e) { _t2s = null; }
+(function initT2SButton() {
+  var btn = el('btn-t2s');
+  if (!btn) return;
+  if (!_t2s) {
+    btn.style.opacity = '.3';
+    btn.title = '简繁转换组件未找到（vendor/opencc-t2cn.js）';
+    btn.addEventListener('click', function () { addLog('简繁转换组件未加载'); });
+    return;
+  }
+  btn.style.opacity = '.5';
+})();
 
-/* ═══ WebSocket（协议自适应） ═══ */
-function wsSend(t,d){if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:t,data:d}))}
-function sendKey(k){wsSend('key',k)}
-
-var logOpen=false;
-function toggleLog(){logOpen=!logOpen;el('logpanel').classList.toggle('open',logOpen)}
-function addLog(m){var b=el('logbody');b.innerHTML+=m+'\n';b.scrollTop=b.scrollHeight}
-
-function connect(){
-  var proto=location.protocol==='https:'?'wss://':'ws://';
-  ws=new WebSocket(proto+location.host);
-  ws.onopen=function(){el('t-artist').textContent='已连接';addLog('已连接')};
-  ws.onclose=function(){el('t-artist').textContent='断开，重连中...';setTimeout(connect,3000)};
-  ws.onmessage=function(ev){try{handleMsg(JSON.parse(ev.data))}catch(e){}}
+function toggleT2S() {
+  if (!_t2s) return;
+  S.useSimp = !S.useSimp;
+  var btn = el('btn-t2s');
+  btn.style.opacity = S.useSimp ? '1' : '.5';
+  btn.style.borderColor = S.useSimp ? 'var(--a)' : '';
+  btn.style.color = S.useSimp ? 'var(--a)' : '';
+  if (!S.origL) return;
+  if (S.useSimp && !S.simpL) {
+    S.simpL = S.origL.map(function (line) { return { time: line.time, text: _t2s(line.text) }; });
+  }
+  paintLyrics(S.useSimp ? S.simpL : S.origL, true);
 }
 
-function handleMsg(msg){
-  var d=msg.data;
-  if(msg.type==='init'){
-    el('dot').className=d.connected?'dot on':'dot';
-    if(d.title){el('t-title').textContent=d.title;el('t-artist').textContent=d.artist||''}
-    S.position=d.position||0;S.duration=d.duration||0;S.estDur=d.duration||0;
-    if(d.lyrics)renderLyrics(d.lyrics,d.lyricsSource);updateTime();
-  }else if(msg.type==='status'){el('dot').className=d.connected?'dot on':'dot'}
-  else if(msg.type==='track'){el('t-title').textContent=d.title||'';el('t-artist').textContent=d.artist||''}
-  else if(msg.type==='position'){S.position=d.position||0;S.isPlaying=d.isPlaying;S.estDur=d.duration||S.estDur;updateTime();el('bplay').innerHTML=d.isPlaying?'&#10074;&#10074;':'&#9654;'}
-  else if(msg.type==='lyrics'){
-    if(d.lyrics){S.origL=d.lyrics;S.simpL=_t2s?d.lyrics.map(function(l){return{time:l.time,text:_t2s(l.text)}}):d.lyrics;renderLyrics(S.useSimp?S.simpL:S.origL,d.source)}
-    else if(d.source==='loading')el('body').innerHTML='<div class="msg"><span class="spin"></span>正在获取歌词...</div>';
-    else el('body').innerHTML='<div class="msg">未找到歌词，请手动搜索或粘贴</div>';
+/* ═══ 日志 ═══ */
+function toggleLog() {
+  logOpen = !logOpen;
+  el('logpanel').classList.toggle('open', logOpen);
+  if (logOpen && pendingLogs.length) {
+    pendingLogs.forEach(appendLog);
+    pendingLogs = [];
   }
-  else if(msg.type==='searchResults')showResults(d)
-  else if(msg.type==='log')addLog(d.message)
-  else if(msg.type==='logs'&&Array.isArray(d))d.forEach(function(m){addLog(m)})
 }
 
-/* ═══ 歌词渲染 ═══ */
-function renderLyrics(lyrics,source){
-  S.lyrics=lyrics;S.idx=-1;S.lyricsSource=source;
-  if(lyrics.length>0)S.estDur=lyrics[lyrics.length-1].time+15;
-  var body=el('body');body.innerHTML='';
-  if(!lyrics||!lyrics.length){body.innerHTML='<div class="msg">无歌词</div>';el('empty').classList.add('hide');return}
-  addLog('歌词: '+lyrics.length+' 行 ('+source+')');
-  for(var i=0;i<lyrics.length;i++){
-    var div=document.createElement('div');div.className='ll';
-    div.innerHTML='<span class="ts">'+fmt(lyrics[i].time)+'</span><span>'+esc(lyrics[i].text)+'</span>';
-    (function(time){div.addEventListener('click',function(){
-      S.offset=time-S.position;el('oval').textContent='偏移: '+S.offset.toFixed(1)+'s';
-      addLog('同步: '+fmt(time)+' off='+S.offset.toFixed(1)+'s');
-    })})(lyrics[i].time);
-    body.appendChild(div);
+function appendLog(message) {
+  var row = document.createElement('div');
+  row.textContent = message;
+  logBody.appendChild(row);
+  while (logBody.childElementCount > 200) logBody.removeChild(logBody.firstChild);
+  logBody.scrollTop = logBody.scrollHeight;
+}
+
+function addLog(message) {
+  if (!logOpen) {
+    pendingLogs.push(message);
+    if (pendingLogs.length > 200) pendingLogs.shift();
+    return;
   }
+  appendLog(message);
+}
+
+/* ═══ WebSocket（自动重连 + 退避） ═══ */
+var ws = null;
+var retryDelay = 1000;
+var retryTimer = null;
+
+function wsSend(type, data) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: type, data: data }));
+}
+function sendKey(key) { wsSend('key', key); }
+
+function setConnectedUI(connected) {
+  el('dot').className = connected ? 'dot on' : 'dot';
+  if (!connected) {
+    el('t-artist').textContent = '未检测到播放器';
+    el('t-title').textContent = 'LyricFlow';
+  }
+}
+
+function connect() {
+  if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+  var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+  try { ws = new WebSocket(proto + location.host); } catch (e) { scheduleReconnect(); return; }
+
+  ws.onopen = function () {
+    retryDelay = 1000;
+    el('t-artist').textContent = '已连接';
+    addLog('已连接');
+  };
+  ws.onclose = function (event) {
+    el('t-artist').textContent = '断开，重连中...';
+    addLog('连接关闭' + (event && event.code ? ' (' + event.code + ')' : ''));
+    scheduleReconnect();
+  };
+  ws.onerror = function () { try { ws.close(); } catch (e) {} };
+  ws.onmessage = function (event) {
+    var message;
+    try { message = JSON.parse(event.data); } catch (e) { return; }
+    handleMsg(message);
+  };
+}
+
+function scheduleReconnect() {
+  if (retryTimer) return;
+  retryTimer = setTimeout(function () { retryTimer = null; connect(); }, retryDelay);
+  retryDelay = Math.min(retryDelay * 2, 10000);
+}
+
+function handleMsg(msg) {
+  var d = msg.data || {};
+  if (msg.type === 'init') {
+    setConnectedUI(!!d.connected);
+    if (d.title) { el('t-title').textContent = d.title; el('t-artist').textContent = d.artist || ''; }
+    S.position = d.position || 0;
+    S.duration = d.duration || d.estDur || 0;
+    S.isPlaying = !!d.isPlaying;
+    setPlayIcon(S.isPlaying);
+    updateTime();
+    if (d.lyrics && d.lyrics.length) renderLyrics(d.lyrics, d.lyricsSource || '');
+    else showEmpty(true);
+  } else if (msg.type === 'status') {
+    setConnectedUI(!!d.connected);
+    if (!d.connected) showEmpty(true);
+  } else if (msg.type === 'track') {
+    el('t-title').textContent = d.title || 'LyricFlow';
+    el('t-artist').textContent = d.artist || '';
+    resetLyricsView();
+    if (d.title) showLoading();
+    else showEmpty(true);
+  } else if (msg.type === 'position') {
+    S.position = d.position || 0;
+    S.isPlaying = !!d.isPlaying;
+    if (d.duration) S.duration = d.duration;
+    setPlayIcon(S.isPlaying);
+    updateTime();
+    updateActive();
+  } else if (msg.type === 'lyrics') {
+    if (d.lyrics && d.lyrics.length) {
+      renderLyrics(d.lyrics, d.source || '');
+    } else if (d.source === 'loading') {
+      showLoading();
+    } else {
+      showNotFound();
+    }
+  } else if (msg.type === 'searchResults') {
+    showResults(d);
+  } else if (msg.type === 'log') {
+    addLog(d.message);
+  } else if (msg.type === 'logs' && Array.isArray(d)) {
+    d.forEach(function (line) { addLog(line); });
+  }
+}
+
+function setPlayIcon(playing) {
+  el('bplay').innerHTML = playing ? '&#10074;&#10074;' : '&#9654;';
+}
+
+/* ═══ 歌词视图状态 ═══ */
+function showEmpty(on) {
+  el('empty').classList.toggle('hide', !on);
+  if (on) resetLyricsView();
+}
+
+function resetLyricsView() {
+  S.lyrics = [];
+  S.origL = null;
+  S.simpL = null;
+  S.idx = -1;
+  S.lineEls = [];
+  listBody.textContent = '';
+}
+
+function showLoading() {
   el('empty').classList.add('hide');
+  listBody.innerHTML = '<div class="msg"><span class="spin"></span>正在获取歌词...</div>';
+  S.lyrics = [];
+  S.origL = null;
+  S.simpL = null;
+  S.idx = -1;
+  S.lineEls = [];
+}
+
+function showNotFound() {
+  el('empty').classList.add('hide');
+  listBody.innerHTML = '<div class="msg">未找到歌词<br><span style="font-size:.7rem;color:var(--t4)">可用顶部的「搜索 / 粘贴 / .lrc」手动添加</span></div>';
+  S.lyrics = [];
+  S.lineEls = [];
+  S.idx = -1;
+}
+
+/* ═══ 歌词渲染（一次拼接 + 事件委托） ═══ */
+function renderLyrics(lyrics, source, keepScroll) {
+  if (!lyrics || !lyrics.length) { showNotFound(); return; }
+  S.origL = lyrics;
+  S.simpL = null;
+  S.source = source || '';
+  if (S.useSimp && _t2s) {
+    S.simpL = lyrics.map(function (line) { return { time: line.time, text: _t2s(line.text) }; });
+  }
+  paintLyrics(S.useSimp && S.simpL ? S.simpL : lyrics, keepScroll);
+  addLog('歌词: ' + S.lyrics.length + ' 行 (' + (S.source || '?') + ')');
+}
+
+function paintLyrics(lines, keepScroll) {
+  S.lyrics = lines;
+  S.idx = -1;
+  var html = [];
+  for (var i = 0; i < lines.length; i++) {
+    html.push('<div class="ll" data-t="' + lines[i].time + '"><span class="ts">' + fmt(lines[i].time) + '</span><span>' + esc(lines[i].text) + '</span></div>');
+  }
+  listBody.innerHTML = html.join('');
+  S.lineEls = listBody.children;
+  el('empty').classList.add('hide');
+
+  // Initial fade distance for every line (later only edited around the active one).
+  for (var j = 0; j < S.lineEls.length; j++) styleLine(j, -1);
+
+  if (!S.duration) {
+    S.duration = lines[lines.length - 1].time + 15;
+    updateTime();
+  }
+  if (!keepScroll) el('scroller').scrollTop = 0;
+  updateActive(true);
+}
+
+function styleLine(index, activeIndex) {
+  var element = S.lineEls[index];
+  if (!element) return;
+  // Before the first timestamp the first line is shown normally but not active.
+  var reference = activeIndex < 0 ? 0 : activeIndex;
+  var distance = Math.abs(index - reference);
+  if (index === activeIndex) {
+    element.classList.add('on');
+    element.style.opacity = '1';
+    element.style.transform = 'scale(1)';
+  } else {
+    element.classList.remove('on');
+    element.style.opacity = String(Math.max(0.07, 1 - distance * 0.22));
+    element.style.transform = 'scale(' + Math.max(0.95, 1 - distance * 0.008) + ')';
+  }
+}
+
+/* 默认点击不会改偏移，只唤出控制栏；开启「校准」后点一行才对齐，双击可直接对齐 */
+var calibrateMode = false;
+
+listBody.addEventListener('click', function (event) {
+  var line = event.target.closest('.ll');
+  if (!line || !line.dataset.t) return;
+  if (!calibrateMode) return;
+  applyOffsetFor(parseFloat(line.dataset.t));
+});
+
+listBody.addEventListener('dblclick', function (event) {
+  var line = event.target.closest('.ll');
+  if (!line || !line.dataset.t) return;
+  applyOffsetFor(parseFloat(line.dataset.t));
+});
+
+function toggleCalibrate() {
+  setCalibrate(!calibrateMode);
+  showToast(calibrateMode ? '校准模式：点一行歌词即可对齐' : '校准模式已关闭');
+}
+
+function setCalibrate(on) {
+  calibrateMode = !!on;
+  var btn = el('btn-cal');
+  if (!btn) return;
+  btn.classList.toggle('active', calibrateMode);
+  btn.style.color = calibrateMode ? 'var(--a)' : '';
+  btn.style.borderColor = calibrateMode ? 'rgba(255,176,84,.6)' : '';
+  btn.style.background = calibrateMode ? 'var(--at)' : '';
+}
+
+function applyOffsetFor(time) {
+  S.offset = time - S.position;
+  saveOffset();
+  updateOffsetLabel();
+  updateActive(true);
+  if (calibrateMode) setCalibrate(false);
+  showToast('已对齐：偏移 ' + (S.offset >= 0 ? '+' : '') + S.offset.toFixed(1) + 's，按 R 复原');
+  addLog('对齐: ' + fmt(time) + ' off=' + S.offset.toFixed(1) + 's');
+}
+
+/* ═══ 轻提示 ═══ */
+var toastTimer = null;
+function showToast(text, actionLabel, action, duration) {
+  var toast = el('toast');
+  if (!toast) return;
+  el('toastText').textContent = text;
+  var button = el('toastAction');
+  if (actionLabel && action) {
+    button.hidden = false;
+    button.textContent = actionLabel;
+    button.onclick = function () { hideToast(); action(); };
+  } else {
+    button.hidden = true;
+    button.onclick = null;
+  }
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, duration || 5000);
+}
+
+function hideToast() {
+  var toast = el('toast');
+  if (toast) toast.classList.remove('show');
+  clearTimeout(toastTimer);
 }
 
 /* ═══ 活跃行高亮 + 自动滚动 ═══ */
-function updateActive(){
-  var t=S.position+S.offset,idx=-1;
-  for(var i=S.lyrics.length-1;i>=0;i--){if(S.lyrics[i].time<=t){idx=i;break}}
-  if(idx===-1&&S.lyrics.length>0)idx=0;
-  if(idx!==S.idx){
-    S.idx=idx;
-    var lines=el('body').children;
-    for(var i=0;i<lines.length;i++){
-      var dist=Math.abs(i-idx),active=i===idx;
-      if(active){lines[i].classList.add('on');lines[i].style.opacity='1';lines[i].style.transform='scale(1)'}
-      else{lines[i].classList.remove('on');lines[i].style.opacity=Math.max(.07,1-dist*.22);lines[i].style.transform='scale('+Math.max(.95,1-dist*.008)+')'}
-    }
-    if(!S.userScroll){
-      var act=el('body').querySelector('.ll.on');
-      if(act){S.autoScrolling=true;act.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(function(){S.autoScrolling=false},600)}
+function updateActive(force) {
+  var count = S.lyrics.length;
+  if (!count) return;
+
+  var target = S.position + S.offset;
+  var lo = 0, hi = count - 1, idx = -1;
+  while (lo <= hi) {
+    var mid = (lo + hi) >> 1;
+    if (S.lyrics[mid].time <= target) { idx = mid; lo = mid + 1; }
+    else hi = mid - 1;
+  }
+
+  if (idx === S.idx && !force) return;
+  var previous = S.idx;
+  S.idx = idx;
+
+  // Fade is flat beyond five lines, so only two windows need repainting.
+  var touched = {};
+  for (var i = Math.max(0, previous - 5); i <= Math.min(count - 1, previous + 5); i++) touched[i] = true;
+  for (var j = Math.max(0, idx - 5); j <= Math.min(count - 1, idx + 5); j++) touched[j] = true;
+
+  Object.keys(touched).forEach(function (key) {
+    styleLine(Number(key), idx);
+  });
+
+  if (idx >= 0 && !S.userScroll) {
+    var active = S.lineEls[idx];
+    if (active) {
+      S.autoScrolling = true;
+      active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function () { S.autoScrolling = false; }, 600);
     }
   }
 }
 
-/* 滚动监听（全局只注册一次） */
-var scrollTimer;
-el('scroller').addEventListener('scroll',function(){if(S.autoScrolling)return;S.userScroll=true;clearTimeout(scrollTimer);scrollTimer=setTimeout(function(){S.userScroll=false},3500)},{passive:true});
+/* 仅注册一次滚动监听 */
+var scrollTimer = null;
+el('scroller').addEventListener('scroll', function () {
+  if (S.autoScrolling) return;
+  S.userScroll = true;
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(function () { S.userScroll = false; }, 3500);
+}, { passive: true });
 
-/* ═══ 时间/进度 ═══ */
-function updateTime(){el('tc').textContent=fmt(S.position);el('td').textContent=fmt(S.estDur);if(S.estDur>0)el('pfill').style.width=Math.min(100,S.position/S.estDur*100)+'%'}
-function offAdd(v){S.offset+=v;el('oval').textContent='偏移: '+S.offset.toFixed(1)+'s'}
+/* ═══ 时间/进度/偏移 ═══ */
+function updateTime() {
+  el('tc').textContent = fmt(S.position);
+  el('td').textContent = fmt(S.duration);
+  el('pfill').style.width = (S.duration > 0 ? Math.min(100, Math.max(0, S.position / S.duration * 100)) : 0) + '%';
+}
+
+function updateOffsetLabel() {
+  el('oval').textContent = '偏移: ' + S.offset.toFixed(1) + 's';
+}
+
+function saveOffset() {
+  try { localStorage.setItem('lf_offset', String(S.offset)); } catch (e) {}
+}
+
+function offAdd(value) {
+  S.offset += value;
+  saveOffset();
+  updateOffsetLabel();
+  updateActive(true);
+}
+
+/* 一键复原：偏移归零 + 回到当前歌词行 */
+function resetLyricsPosition() {
+  S.offset = 0;
+  saveOffset();
+  updateOffsetLabel();
+  S.userScroll = false;
+  updateActive(true);
+  if (S.idx < 0) {
+    el('scroller').scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  addLog('已复原歌词位置');
+}
+
+(function restoreOffset() {
+  try {
+    var saved = parseFloat(localStorage.getItem('lf_offset'));
+    if (isFinite(saved)) S.offset = saved;
+  } catch (e) {}
+  updateOffsetLabel();
+})();
 
 /* ═══ 弹窗 ═══ */
-function openModal(n){el('m-'+n).classList.add('open');if(n==='search')setTimeout(function(){el('s-track').focus()},200)}
-function closeModal(n){el('m-'+n).classList.remove('open')}
-document.querySelectorAll('.modal').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open')})});
-
-function doSearch(){var t=el('s-track').value.trim(),a=el('s-artist').value.trim();if(!t){el('s-track').focus();return}el('s-res').innerHTML='<div class="msg"><span class="spin"></span>搜索中...</div>';wsSend('search',{track:t,artist:a})}
-function showResults(results){
-  var box=el('s-res');box.innerHTML='';
-  if(!results||!results.length){box.innerHTML='<div class="srinfo">未找到结果</div>';return}
-  results.forEach(function(r){
-    var div=document.createElement('div');div.className='sr';
-    div.innerHTML='<h4>'+esc(r.trackName)+'</h4><p>'+esc(r.artistName)+(r.albumName?' &middot; '+esc(r.albumName):'')+(r.duration?' &middot; '+fmt(r.duration):'')+'</p>'+(r.hasSynced?'<span class="tag">同步歌词</span>':'<span class="tag no">仅文本</span>');
-    div.addEventListener('click',function(){var l=r.syncedLyrics||r.plainLyrics;if(l){wsSend('applyLyrics',l);closeModal('search')}});
-    box.appendChild(div);
-  });
+function openModal(name) {
+  el('m-' + name).classList.add('open');
+  if (name === 'search') setTimeout(function () { el('s-track').focus(); }, 200);
 }
-function doPaste(){var t=el('p-txt').value.trim();if(!t)return;wsSend('applyLyrics',t);closeModal('paste')}
+function closeModal(name) { el('m-' + name).classList.remove('open'); }
+
+document.querySelectorAll('.modal').forEach(function (modal) {
+  modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('open'); });
+});
+
+function doSearch() {
+  var track = el('s-track').value.trim();
+  var artist = el('s-artist').value.trim();
+  if (!track) { el('s-track').focus(); return; }
+  el('s-res').innerHTML = '<div class="msg"><span class="spin"></span>搜索中...</div>';
+  wsSend('search', { track: track, artist: artist });
+}
+
+function showResults(results) {
+  var box = el('s-res');
+  if (!results || !results.length) { box.innerHTML = '<div class="srinfo">未找到结果</div>'; return; }
+  var html = [];
+  results.forEach(function (r, index) {
+    html.push('<div class="sr" data-idx="' + index + '"><h4>' + esc(r.trackName) + '</h4><p>' + esc(r.artistName) +
+      (r.albumName ? ' &middot; ' + esc(r.albumName) : '') +
+      (r.duration ? ' &middot; ' + fmt(r.duration) : '') + '</p>' +
+      (r.hasSynced ? '<span class="tag">同步歌词</span>' : '<span class="tag no">仅文本</span>') + '</div>');
+  });
+  box.innerHTML = html.join('');
+  box.onclick = function (event) {
+    var row = event.target.closest('.sr');
+    if (!row) return;
+    var result = results[Number(row.dataset.idx)];
+    var lyric = result && (result.syncedLyrics || result.plainLyrics);
+    if (lyric) { wsSend('applyLyrics', lyric); closeModal('search'); }
+  };
+}
+
+function doPaste() {
+  var text = el('p-txt').value.trim();
+  if (!text) return;
+  wsSend('applyLyrics', text);
+  closeModal('paste');
+}
 
 /* ═══ 文件上传 ═══ */
-el('flrc').addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){wsSend('lrc',ev.target.result)};r.readAsText(f);e.target.value=''});
+el('flrc').addEventListener('change', function (event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function (e) { wsSend('lrc', e.target.result); };
+  reader.readAsText(file);
+  event.target.value = '';
+});
+
+/* ═══ 歌词 / 控制台 视图切换 ═══ */
+var currentView = 'lyrics';
+
+function setView(view) {
+  var next = view === 'console' ? 'console' : 'lyrics';
+  var layer = el('consoleView');
+  if (!layer) return;
+
+  if (next === 'console') {
+    var frame = el('consoleFrame');
+    if (frame && !frame.getAttribute('src')) {
+      frame.addEventListener('load', function () {
+        frame.classList.add('ready');
+        var loading = el('consoleLoading');
+        if (loading) loading.classList.add('hide');
+      });
+      frame.setAttribute('src', '/gui?embed=1');
+    }
+  }
+
+  currentView = next;
+  layer.classList.toggle('open', next === 'console');
+  layer.setAttribute('aria-hidden', next === 'console' ? 'false' : 'true');
+
+  var buttons = document.querySelectorAll('#viewSwitch button');
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].classList.toggle('on', buttons[i].getAttribute('data-view') === next);
+  }
+
+  if (next === 'lyrics') { showTopbar(); showControls(); }
+}
+
+document.querySelectorAll('#viewSwitch button').forEach(function (btn) {
+  btn.addEventListener('click', function () { setView(btn.getAttribute('data-view')); });
+});
+
+/* 内嵌控制台里的“返回歌词”会发消息给父页面 */
+window.addEventListener('message', function (event) {
+  if (event.origin !== location.origin && event.origin !== 'null') return;
+  if (event.data && event.data.type === 'lf-close-console') setView('lyrics');
+});
 
 /* ═══ 键盘快捷键 ═══ */
-document.addEventListener('keydown',function(e){
-  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'){if(e.key==='Enter'&&el('m-search').classList.contains('open'))doSearch();if(e.key==='Escape')document.querySelectorAll('.modal.open').forEach(function(m){m.classList.remove('open')});return}
-  if(e.key===' '){e.preventDefault();sendKey('toggle')}
-  else if(e.key==='ArrowLeft'){e.preventDefault();offAdd(-5)}
-  else if(e.key==='ArrowRight'){e.preventDefault();offAdd(5)}
-  else if(e.key==='ArrowUp'){e.preventDefault();offAdd(0.5)}
-  else if(e.key==='ArrowDown'){e.preventDefault();offAdd(-0.5)}
-  else if(e.key==='Escape')document.querySelectorAll('.modal.open').forEach(function(m){m.classList.remove('open')});
+document.addEventListener('keydown', function (event) {
+  var tag = event.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') {
+    if (event.key === 'Escape') document.querySelectorAll('.modal.open').forEach(function (m) { m.classList.remove('open'); });
+    if (event.key === 'Enter' && el('m-search').classList.contains('open')) doSearch();
+    return;
+  }
+  switch (event.key) {
+    case ' ': event.preventDefault(); sendKey('toggle'); break;
+    case 'ArrowLeft': event.preventDefault(); offAdd(-5); break;
+    case 'ArrowRight': event.preventDefault(); offAdd(5); break;
+    case 'ArrowUp': event.preventDefault(); offAdd(0.5); break;
+    case 'ArrowDown': event.preventDefault(); offAdd(-0.5); break;
+    case 'r': case 'R': event.preventDefault(); resetLyricsPosition(); break;
+    case 'h': case 'H': {
+      var hidden = el('topbar').classList.contains('hide');
+      if (hidden) { showTopbar(); showControls(); } else { hideBars(); }
+      break;
+    }
+    case 'c': case 'C':
+      event.preventDefault();
+      setView(currentView === 'console' ? 'lyrics' : 'console');
+      break;
+    case 'Escape':
+      if (currentView === 'console') { setView('lyrics'); break; }
+      document.querySelectorAll('.modal.open').forEach(function (m) { m.classList.remove('open'); });
+      break;
+  }
 });
 
 /* ═══ 全屏 ═══ */
-function toggleFs(){if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(function(){});else document.exitFullscreen()}
+function toggleFs() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function () {});
+  else document.exitFullscreen();
+}
 
 /* ═══ 纯黑模式 ═══ */
-function toggleDark(){
-  var root=document.documentElement,on=root.classList.contains('dark');
-  if(on)root.classList.remove('dark');else root.classList.add('dark');
-  var b=el('btn-dk');if(b){b.style.opacity=on?'.5':'1';b.style.borderColor=on?'':'var(--a)';b.style.color=on?'':'var(--a)'}
-  try{localStorage.setItem('lf_dark',on?'0':'1')}catch(e){}
+function toggleDark() {
+  var root = document.documentElement;
+  var on = root.classList.contains('dark');
+  applyDark(!on);
+  try { localStorage.setItem('lf_dark', on ? '0' : '1'); } catch (e) {}
 }
-(function(){
-  var saved='';try{saved=localStorage.getItem('lf_dark')}catch(e){}
-  if(saved==='1'){document.documentElement.classList.add('dark');setTimeout(function(){var b=el('btn-dk');if(b){b.style.opacity='1';b.style.borderColor='var(--a)';b.style.color='var(--a)'}},200)}
+
+function applyDark(on) {
+  var root = document.documentElement;
+  root.classList.toggle('dark', on);
+  var btn = el('btn-dk');
+  if (btn) {
+    btn.style.opacity = on ? '1' : '.5';
+    btn.style.borderColor = on ? 'var(--a)' : '';
+    btn.style.color = on ? 'var(--a)' : '';
+  }
+}
+
+(function restoreDark() {
+  var saved = '';
+  try { saved = localStorage.getItem('lf_dark'); } catch (e) {}
+  if (saved === '1') applyDark(true);
 })();
 
 /* ═══ 阻止息屏 ═══ */
-var _wakeLockObj=null,_wakeLockVideo=null;
-function startWakeLock(){
-if('wakeLock' in navigator&&document.visibilityState==='visible'){
-    navigator.wakeLock.request('screen').then(function(lock){_wakeLockObj=lock;lock.addEventListener('release',function(){_wakeLockObj=null})}).catch(function(){});
-    return;
-  }
-  if(!_wakeLockVideo){try{_wakeLockVideo=document.createElement('video');_wakeLockVideo.setAttribute('playsinline','');_wakeLockVideo.setAttribute('muted','');_wakeLockVideo.style.cssText='position:fixed;width:1px;height:1px;left:-999px;opacity:0;pointer-events:none';var canvas=document.createElement('canvas');canvas.width=2;canvas.height=2;_wakeLockVideo.src=canvas.toDataURL('video/webm');_wakeLockVideo.loop=true;document.body.appendChild(_wakeLockVideo);_wakeLockVideo.play().catch(function(){})}catch(e){}}
+var wakeLock = null;
+function requestWakeLock() {
+  if (!('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+  navigator.wakeLock.request('screen').then(function (lock) {
+    wakeLock = lock;
+    lock.addEventListener('release', function () { wakeLock = null; });
+  }).catch(function () {});
 }
-startWakeLock();
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')startWakeLock()});
-
-/* ═══ 悬浮顶栏/控制栏 ═══ */
-var topbarTimer=null,controlsTimer=null;
-function showTopbar(){el('topbar').classList.remove('hide');clearTimeout(topbarTimer);topbarTimer=setTimeout(function(){el('topbar').classList.add('hide')},6000)}
-function showControls(){el('controls').classList.remove('hide');clearTimeout(controlsTimer);controlsTimer=setTimeout(function(){el('controls').classList.add('hide')},6000)}
-
-el('viewport').addEventListener('click',function(e){
-  if(e.target.closest('.ll')||e.target===el('viewport')||e.target.closest('#scroller')||e.target.closest('.spacer')){
-    showTopbar();showControls();
-    setTimeout(function(){el('topbar').classList.add('hide');el('controls').classList.add('hide')},3000);
-  }
-},{passive:true});
-
-document.addEventListener('touchstart',function(e){var y=e.touches[0].clientY,h=window.innerHeight;if(y<50)showTopbar();if(y>h-80)showControls()},{passive:true});
-
-document.addEventListener('keydown',function(e){
-  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
-  if(e.key==='h'||e.key==='H'){
-    var tb=el('topbar').classList.contains('hide'),cb=el('controls').classList.contains('hide');
-    if(tb||cb){showTopbar();showControls()}else{el('topbar').classList.add('hide');el('controls').classList.add('hide')}
-  }
+requestWakeLock();
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible') requestWakeLock();
 });
 
-if(window.innerWidth<=640){topbarTimer=setTimeout(function(){el('topbar').classList.add('hide')},6000);controlsTimer=setTimeout(function(){el('controls').classList.add('hide')},6000)}
+/* ═══ 悬浮顶栏/控制栏 ═══ */
+var topbarTimer = null;
+var controlsTimer = null;
+
+function showTopbar() {
+  el('topbar').classList.remove('hide');
+  clearTimeout(topbarTimer);
+  topbarTimer = setTimeout(function () { el('topbar').classList.add('hide'); }, 6000);
+}
+
+function showControls() {
+  el('controls').classList.remove('hide');
+  clearTimeout(controlsTimer);
+  controlsTimer = setTimeout(function () { el('controls').classList.add('hide'); }, 6000);
+}
+
+function hideBars() {
+  el('topbar').classList.add('hide');
+  el('controls').classList.add('hide');
+}
+
+/* 鼠标停在栏上时不要自动隐藏 */
+el('topbar').addEventListener('mouseenter', function () { clearTimeout(topbarTimer); });
+el('topbar').addEventListener('mouseleave', function () { showTopbar(); });
+el('controls').addEventListener('mouseenter', function () { clearTimeout(controlsTimer); });
+el('controls').addEventListener('mouseleave', function () { showControls(); });
+
+el('viewport').addEventListener('click', function (e) {
+  showTopbar();
+  showControls();
+}, { passive: true });
+
+el('scroller').addEventListener('wheel', function () { showControls(); }, { passive: true });
+
+/* 触摸上半屏/下半屏唤出对应栏；从顶部下滑同样有效 */
+document.addEventListener('touchstart', function (event) {
+  if (!event.touches || !event.touches.length) return;
+  var y = event.touches[0].clientY;
+  var h = window.innerHeight;
+  if (y < h * 0.3) showTopbar();
+  if (y > h * 0.72) showControls();
+}, { passive: true });
+
+/* 桌面鼠标移到上下边缘时自动唤出，方便找回隐藏的栏 */
+var edgeStamp = 0;
+document.addEventListener('mousemove', function (event) {
+  var now = Date.now();
+  if (now - edgeStamp < 500) return;
+  var h = window.innerHeight;
+  if (event.clientY < 70) { edgeStamp = now; showTopbar(); }
+  else if (event.clientY > h - 90) { edgeStamp = now; showControls(); }
+}, { passive: true });
+
+if (window.innerWidth <= 640) {
+  topbarTimer = setTimeout(function () { el('topbar').classList.add('hide'); }, 6000);
+  controlsTimer = setTimeout(function () { el('controls').classList.add('hide'); }, 6000);
+}
 
 /* ═══ 电量显示 ═══ */
-(function(){
-  var batEl=el('bat');if(!batEl)return;
-  var isLocal=location.hostname==='localhost'||location.hostname==='127.0.0.1';
-  var isHTTPS=location.protocol==='https:';
-  function renderBat(level,charging){
-    if(level<0)return;batEl.style.display='flex';
-    var pct=Math.round(level*100);
-    var color=pct<=20?'#e55':pct<=50?'#f0a030':'#5c5';
-    batEl.className=charging?'bat-chg':(pct<=20?'bat-low':'');
-    batEl.innerHTML='<span class="bat-icon"><span class="bat-fill" style="width:'+pct+'%;background:'+color+'"></span></span><span>'+pct+'%</span>';
+(function battery() {
+  var batEl = el('bat');
+  if (!batEl) return;
+  var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  var isHttps = location.protocol === 'https:';
+
+  function render(level, charging) {
+    if (level < 0) return;
+    batEl.style.display = 'flex';
+    var pct = Math.round(level * 100);
+    var color = pct <= 20 ? '#e55' : pct <= 50 ? '#f0a030' : '#5c5';
+    batEl.className = charging ? 'bat-chg' : (pct <= 20 ? 'bat-low' : '');
+    batEl.innerHTML = '<span class="bat-icon"><span class="bat-fill" style="width:' + pct + '%;background:' + color + '"></span></span><span>' + pct + '%</span>';
   }
-  if('getBattery' in navigator&&(isHTTPS||isLocal)){
-    navigator.getBattery().then(function(bm){
-      renderBat(bm.level,bm.charging);
-      bm.addEventListener('levelchange',function(){renderBat(bm.level,bm.charging)});
-      bm.addEventListener('chargingchange',function(){renderBat(bm.level,bm.charging)});
-    }).catch(function(){});
-  }else if(!isHTTPS&&!isLocal){
-    var httpsPort=parseInt(location.port||'3721')+1;
-    batEl.style.display='flex';
-    batEl.innerHTML='<a href="https://'+location.hostname+':'+httpsPort+'" style="color:var(--a);font-size:.6rem;text-decoration:underline;font-family:var(--fm)">HTTPS 电量</a>';
+
+  if ('getBattery' in navigator && (isHttps || isLocal)) {
+    navigator.getBattery().then(function (manager) {
+      render(manager.level, manager.charging);
+      manager.addEventListener('levelchange', function () { render(manager.level, manager.charging); });
+      manager.addEventListener('chargingchange', function () { render(manager.level, manager.charging); });
+    }).catch(function () {});
+  } else if (!isHttps && !isLocal) {
+    var httpsPort = parseInt(location.port || '3721', 10) + 1;
+    batEl.style.display = 'flex';
+    batEl.innerHTML = '<a href="https://' + location.hostname + ':' + httpsPort + '" style="color:var(--a);font-size:.6rem;text-decoration:underline;font-family:var(--fm)">HTTPS 电量</a>';
   }
 })();
 
 /* ═══ 启动 ═══ */
 connect();
-requestAnimationFrame(function tick(){updateActive();requestAnimationFrame(tick)});
+updateTime();
+if (location.hash === '#console') setView('console');
 </script>
 </body>
 </html>

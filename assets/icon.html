@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: transparent; }
+  .icon {
+    width: 512px; height: 512px; border-radius: 112px;
+    background: linear-gradient(135deg, #ffd28a 0%, #ffb054 48%, #ff7a59 100%);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    box-shadow:
+      inset 0 10px 26px rgba(255, 255, 255, .35),
+      inset 0 -12px 32px rgba(120, 40, 0, .18);
+  }
+  .icon::after {
+    content: "♫";
+    font-family: "Segoe UI Symbol", serif;
+    font-size: 330px;
+    line-height: 1;
+    color: #1b1305;
+    transform: translateY(-8px);
+    text-shadow: 0 4px 0 rgba(255, 255, 255, .12);
+  }
+</style>
+</head>
+<body>
+  <div class="icon"></div>
+</body>
+</html>
